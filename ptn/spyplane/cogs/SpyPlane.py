@@ -2,7 +2,6 @@ import os
 import sys
 
 from discord.ext import commands
-from discord_slash.utils.manage_commands import remove_all_commands
 
 from ptn.spyplane.cogs.tick_detection import TickDetection
 from ptn.spyplane.constants import bot_guild_id, TOKEN, get_bot_control_channel, bot, get_tick_detection_channel, \
@@ -10,7 +9,7 @@ from ptn.spyplane.constants import bot_guild_id, TOKEN, get_bot_control_channel,
 from ptn.spyplane._metadata import __version__
 
 
-class DiscordBotCommands(commands.Cog):
+class SpyPlane(commands.Cog):
     def __init__(self, bot):
         """
         This class is a collection of generic blocks used throughout the booze bot.
@@ -35,32 +34,6 @@ class DiscordBotCommands(commands.Cog):
     async def on_disconnect(self):
         print(f'Spy Plane has disconnected from discord server, version: {__version__}.')
 
-    @commands.command(name='ping', help='Ping the bot')
-    @commands.has_role('Admin')
-    async def ping(self, ctx):
-        """
-        Ping the bot and get a response
-
-        :param discord.Context ctx: The Discord context object
-        :returns: None
-        """
-        await ctx.send(f"**Agent {self.bot.user.name} reporting in. Ready for clandestine operations**")
-
-    # quit the bot
-    @commands.command(name='exit', help="Stops the bots process on the VM, ending all functions.")
-    @commands.has_role('Admin')
-    async def exit(self, ctx):
-        """
-        Stop-quit command for the bot.
-
-        :param discord.ext.commands.Context ctx: The Discord context object
-        :returns: None
-        """
-        print(f'User {ctx.author} requested to exit')
-        await remove_all_commands(self.bot.user.id, TOKEN, [bot_guild_id()])
-        await ctx.send(f"Cover is blown, going dark.")
-        await sys.exit("User requested exit.")
-
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
         """
@@ -81,32 +54,47 @@ class DiscordBotCommands(commands.Cog):
         else:
             await ctx.send(f"Sorry, that didn't work. Check your syntax and permissions, error: {error}")
 
-    @commands.command(name='update', help="Restarts the bot.")
-    @commands.has_role('Admin')
-    async def update(self, ctx):
-        """
-        Restarts the application for updates to take affect on the local system.
-        """
-        print(f'Restarting the application to perform updates requested by {ctx.author}')
-        os.execv(sys.executable, ['python'] + sys.argv)
-
-    @commands.command(name='version', help="Logs the bot version")
-    @commands.has_role('Admin')
-    async def version(self, ctx):
-        """
-        Logs the bot version
-
-        :param discord.ext.commands.Context ctx: The Discord context object
-        :returns: None
-        """
-        print(f'User {ctx.author} requested the version: {__version__}.')
-        await ctx.send(f"Bagman is on station and awaiting orders. {self.bot.user.name} is on version: {__version__}.")
-
     @commands.Cog.listener()
     async def on_message(self, msg):
-        if msg.author.id == bot.user.id:
+        if msg.author.id==bot.user.id:
             # Skip through, do not try to process the bots own messages or we will loop forever.
             pass
-        elif msg.author.id == BGS_BOT_USER_ID and msg.channel.id == get_tick_detection_channel():
+        elif msg.author.id==BGS_BOT_USER_ID and msg.channel.id==get_tick_detection_channel():
             # Route this to the tick detection handler
             self.tick.validate_message(msg)
+
+
+bot = SpyPlane(intents=Intents.default())
+
+
+@bot.tree.command(name='spy_plane_ping', help='Ping the bot')
+async def spy_plane_ping(interaction: Interaction):
+    """AgroBot: Ping"""
+    await interaction.response.send_message(f'**Agent {self.bot.user.name} reporting in. Ready for clandestine operations**')
+
+
+# quit the bot
+@bot.tree.command(name='exit', help="Stops the bots process on the VM, ending all functions.")
+async def exit(self, ctx):
+    """
+    Stop-quit command for the bot.
+
+    :param discord.ext.commands.Context ctx: The Discord context object
+    :returns: None
+    """
+    print(f'User {ctx.author} requested to exit')
+    await remove_all_commands(self.bot.user.id, TOKEN, [bot_guild_id()])
+    await ctx.send(f"Cover is blown, going dark.")
+    await sys.exit("User requested exit.")
+
+
+@bot.tree.command(name='version', help="Logs the bot version")
+async def version(self, ctx):
+    """
+    Logs the bot version
+
+    :param discord.ext.commands.Context ctx: The Discord context object
+    :returns: None
+    """
+    print(f'User {ctx.author} requested the version: {__version__}.')
+    await ctx.send(f"Bagman is on station and awaiting orders. {self.bot.user.name} is on version: {__version__}.")

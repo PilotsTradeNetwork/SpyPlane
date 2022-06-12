@@ -3,7 +3,6 @@ import os
 
 from discord import Intents
 from discord.ext import commands
-from discord_slash import SlashCommand
 from dotenv import load_dotenv, find_dotenv
 
 # Get the discord token from the local .env file. Deliberately not hosted in the repo or Discord takes the bot down
@@ -15,7 +14,7 @@ load_dotenv(find_dotenv())
 BGS_BOT_USER_ID = 332846508888031232
 
 # Production values
-PROD_DISCORD_GUILD = 800080948716503040  # PTN Discord server
+PROD_DISCORD_GUILD = os.getenv('PROD_DISCORD_GUILD') # PTN Discord server
 PROD_DB_PATH = os.path.join(os.path.expanduser('~'), 'spyplane', 'spyplane.db')
 PROD_DB_DUMPS_PATH = os.path.join(os.path.expanduser('~'), 'spyplane', 'dumps', 'spyplane.sql')
 PROD_TICK_DETECTION_CHANNEL_ID = 829215577527812096

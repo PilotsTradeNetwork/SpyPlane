@@ -1,4 +1,4 @@
-from ptn.spyplane.cogs.DiscordBotCommands import DiscordBotCommands
+from ptn.spyplane.cogs.SpyPlane import SpyPlane
 from ptn.spyplane.constants import bot, TOKEN, _production
 
 print(f'SpyPlane is connecting against production: {_production}.')
@@ -10,7 +10,7 @@ def run():
 
     :returns: None
     """
-    bot.add_cog(DiscordBotCommands(bot))
+    bot.add_cog(SpyPlane(bot))
     bot.run(TOKEN)
 
 
