@@ -8,9 +8,9 @@ authors = ["PTN Devs"]
 spy = "spyplane.main:run"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.10"
 python-dotenv = "^0.20.0"
-"discord.py" = { git = "https://github.com/Rapptz/discord.py", rev = "334ef1d7facce9dbfba2a6924bf57fc59bc827b5" }
+"discord.py" = "^2.2.2"
 aiosqlite = "^0.17.0"
 gspread = "^5.4.0"
 aiocron = "^1.8"
@@ -23,7 +23,7 @@ black = "^24.3.0"
 
 [tool.black]
 line-length = 120
-target-version = ['py39']
+target-version = ['py310']
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
