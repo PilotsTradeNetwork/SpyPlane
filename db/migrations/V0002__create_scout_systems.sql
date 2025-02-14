@@ -1,4 +1,4 @@
-create table scout_systems
+create table if not exists scout_systems
 (
     "system_name" text,
     "priority"    integer,

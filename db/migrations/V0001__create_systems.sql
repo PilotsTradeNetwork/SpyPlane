@@ -1,4 +1,4 @@
-create table systems
+create table if not exists systems
 (
     "id"                           integer,
     "edsm_id"                      integer,

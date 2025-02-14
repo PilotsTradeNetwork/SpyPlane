@@ -1,4 +1,4 @@
-create table scout_history
+create table if not exists scout_history
 (
     "id"          integer primary key autoincrement,
     "system_name" text not null,
