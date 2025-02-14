@@ -7,15 +7,18 @@ import aiosqlite
 from aiosqlite import Connection
 from discord import app_commands, Intents, Client, Object, Emoji
 from discord.abc import GuildChannel, PrivateChannel
+from discord.ext.commands import Bot, when_mentioned_or
 
 from spyplane.constants import GUILD_ID, APPLICATION_ID, DB_PATH
 
 
-class SpyPlane(Client):
-    def __init__(self, *, intents: Intents):
-        super().__init__(intents=intents, application_id=APPLICATION_ID)
+class SpyPlane(Bot):
+    def __init__(self):
+        intents = Intents.default()
+        intents.message_content = True
+        super().__init__(command_prefix=when_mentioned_or('🕵'), intents=intents)
+
         self.db: Optional[Connection] = None
-        self.tree = app_commands.CommandTree(self)
         self.lock: Optional[Lock] = None
         self.emoji_bullseye: Optional[Emoji] = None
         self.channel: Optional[Union[GuildChannel, Thread, PrivateChannel]] = None
@@ -45,6 +48,4 @@ class SpyPlane(Client):
         sys.stdout.flush()
 
 
-intents = Intents.default()
-intents.message_content = True
-bot = SpyPlane(intents=intents)
+bot = SpyPlane()
