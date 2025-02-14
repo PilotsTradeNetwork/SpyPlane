@@ -1,6 +1,6 @@
 FROM python:3.10-slim-buster
 RUN apt update
-RUN apt-get install -qq -y jq curl wget sqlite3
+RUN apt-get install -qq -y jq sqlite3
 RUN mkdir /app
 WORKDIR /app
 ADD generated_requirements.txt /app

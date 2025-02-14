@@ -400,6 +400,24 @@ python-dateutil = "*"
 pytz = ">2021.1"
 
 [[package]]
+name = "discord-ext-prometheus"
+version = "0.2.0"
+description = "An extension for the discord.py library that enables Prometheus metrics"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "discord_ext_prometheus-0.2.0-py3-none-any.whl", hash = "sha256:fbf15acc4323e29b76862ee5394e105b37041cc3c99a13eaa07fa9a6dc17f994"},
+    {file = "discord_ext_prometheus-0.2.0.tar.gz", hash = "sha256:016962b7d1350e99769cf67ed037f0d067f5043ddf9d15cfc92fa26875fd1a32"},
+]
+
+[package.dependencies]
+discord-py = ">=2.2.3,<3"
+prometheus-client = ">=0.16.0,<1"
+
+[package.extras]
+dev = ["black", "pylint"]
+
+[[package]]
 name = "discord-py"
 version = "2.4.0"
 description = "A Python wrapper for the Discord API"
@@ -865,6 +883,20 @@ test = ["appdirs (==1.4.4)", "covdefaults (>=2.3)", "pytest (>=8.3.2)", "pytest-
 type = ["mypy (>=1.11.2)"]
 
 [[package]]
+name = "prometheus-client"
+version = "0.21.1"
+description = "Python client for the Prometheus monitoring system."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "prometheus_client-0.21.1-py3-none-any.whl", hash = "sha256:594b45c410d6f4f8888940fe80b5cc2521b305a1fafe1c58609ef715a001f301"},
+    {file = "prometheus_client-0.21.1.tar.gz", hash = "sha256:252505a722ac04b0456be05c05f75f45d760c2911ffc45f2a06bcaed9f3ae3fb"},
+]
+
+[package.extras]
+twisted = ["twisted"]
+
+[[package]]
 name = "propcache"
 version = "0.2.1"
 description = "Accelerated property cache"
@@ -1279,4 +1311,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "315a9f6a2a437396ae69655252215b6167015571a9da402c6cd4df87f20137cd"
+content-hash = "d5be85d608480d26e6cec634e0b8b394ebb3cf761e0d4fad17f144d06e4496b4"
