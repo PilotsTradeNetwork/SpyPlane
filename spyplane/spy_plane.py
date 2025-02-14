@@ -40,7 +40,8 @@ class SpyPlane(Client):
 
     async def dbclose(self):
         print('closing DB connection')
-        await self.db.close()
+        if self.db:
+            await self.db.close()
         sys.stdout.flush()
 
 
