@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
-rm -rf ./tests/test_workspace/spyplane.db
-flyway -url='jdbc:sqlite:tests/test_workspace/spyplane.db' migrate
-sqlite3 ./tests/test_workspace/spyplane.db < ./db/data/spyplane_import.sql
+DB=./tests/test_workspace/spyplane.db
+
+rm -rf "$DB"
+for file in ./db/migrations/*.sql; do
+  sqlite3 "$DB" < "$file"
+done
+sqlite3 "$DB" < ./db/data/spyplane_import.sql
