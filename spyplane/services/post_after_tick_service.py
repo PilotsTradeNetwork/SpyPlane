@@ -22,13 +22,13 @@ class PostAfterTickService:
     async def post_report(self):
         log("Put up report")
         await self.daily.notify_daily_news()
-    
+
     async def post_systems(self):
         log("Synchronizing with google sheets")
         await self.sync.sync_db_sheet()
         log("Posting systems now")
         await self.sheets.publish_systems_to_scout()
-            
+
     async def run_after_interval(self, pre_launch_message: bool, interval_config_key: str, method_to_run):
         try:
             hours = await ConfigRepository().get_config(interval_config_key)
