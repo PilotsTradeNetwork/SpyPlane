@@ -1,4 +1,4 @@
-create table configuration
+create table if not exists configuration
 (
     "id"        integer primary key autoincrement,
     "name"      text    not null,
@@ -8,3 +8,4 @@ create table configuration
 
 insert into configuration (name, value, timestamp)
 values ('interval_hours', '4', 1655665882)
+on conflict do nothing;

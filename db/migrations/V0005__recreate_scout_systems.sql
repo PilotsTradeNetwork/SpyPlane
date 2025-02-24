@@ -6,7 +6,7 @@ create table scout_systems
     "rownum"      integer
 );
 
-create table scout_systems_posted
+create table if not exists scout_systems_posted
 (
     "system_name" text primary key,
     "priority"    integer,
@@ -15,3 +15,4 @@ create table scout_systems_posted
 
 insert into configuration (name, value, timestamp)
 values ('carryover', 'true', 1655665882)
+on conflict do nothing;
