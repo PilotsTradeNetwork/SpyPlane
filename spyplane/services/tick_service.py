@@ -1,22 +1,15 @@
 import asyncio
-import urllib
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
-from urllib.request import urlopen
 
-import jq
+import httpx
 
 from spyplane.constants import log
-
-tick_query = '''
-.[] | .time |= sub(".000Z";"Z") | .time | fromdateiso8601
-'''
 
 
 class TickService:
     def __init__(self, current_tick: Optional[int] = None):
-        self.compiled_tick_date_query = jq.compile(tick_query)
-        self.current_tick: int = current_tick or self.fetch_current_tick()
+        self.current_tick: int = current_tick or asyncio.run(self.fetch_current_tick())
         log(f"Current Tick: {self.current_tick}")
         assert self.current_tick
 
@@ -24,28 +17,24 @@ class TickService:
         return datetime.utcfromtimestamp(int(self.current_tick))
 
     async def has_ticked(self) -> bool:
-        new_tick = await self.async_fetch_current_tick()
+        new_tick = await self.fetch_current_tick()
         assert new_tick
         tick_changed = self.current_tick != new_tick
         if tick_changed:
             log(f'Tick detected: Current {self.current_tick}, New {new_tick}')
             self.current_tick = new_tick
         else:
-            log(f'No new tick')
+            log('No new tick')
         return tick_changed
 
-    async def async_fetch_current_tick(self) -> int:
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, self.fetch_current_tick)
 
-    # TODO: convert to aiorequest
-    def fetch_current_tick(self) -> int:
-        hdr = {
-            'User-Agent': 'curl/7.68.0',
-            'Accept': '*/*'
-        }
-        link = "https://elitebgs.app/api/ebgs/v5/ticks"
-        req = urllib.request.Request(link, headers=hdr)
-        f = urlopen(req)
-        tick_text = self.compiled_tick_date_query.input(text=f.read().decode('utf-8')).text()
-        return int(tick_text)
+    @staticmethod
+    async def fetch_current_tick() -> int:
+        link = "http://tick.infomancer.uk/galtick.json"
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(link)
+            resp.raise_for_status()
+            tick_info = resp.json()
+        dt = datetime.fromisoformat(tick_info["lastGalaxyTick"].rstrip("Z"))  # python >= 3.11 understands timezone
+        dt = dt.replace(tzinfo=timezone.utc)
+        return int(dt.timestamp())
