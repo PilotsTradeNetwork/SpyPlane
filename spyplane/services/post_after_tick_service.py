@@ -1,8 +1,8 @@
 import asyncio
 
-import discord
+from discord.ext import tasks
 
-from spyplane.constants import log, log_exception, BGS_BOT_USER_ID, TICK_CHANNEL
+from spyplane.constants import log, log_exception
 from spyplane.database.config_repository import ConfigRepository
 from spyplane.services.daily_faction_state_service import DailyFactionStateService
 from spyplane.services.sync_service import SyncService
@@ -43,27 +43,11 @@ class PostAfterTickService:
         except Exception as e:
             log_exception("run_after_interval", e)
 
+    @tasks.loop(minutes=5)
     async def tick_check_and_schedule(self):
-        """
-        This is meant to be called in an aiocron. Uses :py:class:`~spyplane.services.TickService`
-        Currently UNUSED.
-        """
         has_ticked = await self.tick_service.has_ticked()
         if has_ticked:
             self.on_tick()
-
-    async def validate_and_schedule(self, message: discord.message.Message):
-        if message.author.id!=BGS_BOT_USER_ID or message.channel.id!=TICK_CHANNEL:
-            return
-        log("Message from BGS Bot in tick channel!")
-        if not len(message.embeds) or not len(message.embeds[0].fields):
-            log("Not the tick message. Embeds missing")
-            return
-        if message.embeds[0].fields[0].name!="Latest Tick At" or message.embeds[0].title!="Tick Detected":
-            log(f"Not the tick message. Field name: {message.embeds[0].fields[0].name} Title: {message.embeds[0].title}")
-            return
-        log('Tick detection message found!')
-        self.on_tick()
 
     def on_tick(self):
         asyncio.create_task(self.run_after_interval(True, "interval_hours", self.post_systems))

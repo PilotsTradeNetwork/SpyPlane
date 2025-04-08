@@ -32,6 +32,8 @@ async def on_ready():
         bot.lock = asyncio.Lock()
         emoji = bot.get_emoji(EMOJI_BULLSEYE)
         bot.emoji_bullseye = emoji or '✅'
+        if not post_service.tick_check_and_schedule.is_running():
+            post_service.tick_check_and_schedule.start()
     except Exception as e:
         log_exception("on_ready", e)
 
@@ -73,11 +75,3 @@ async def on_raw_reaction_add(payload: RawReactionActionEvent):
             await message.delete()
     except Exception as e:
         log_exception("on_raw_reaction_add", e)
-
-
-@bot.event
-async def on_message(msg):
-    try:
-        await post_service.validate_and_schedule(msg)
-    except Exception as e:
-        log_exception("on_message", e)
