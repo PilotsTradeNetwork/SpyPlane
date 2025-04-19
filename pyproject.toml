@@ -18,6 +18,7 @@ jq = "^1.2.2"
 pytz = "^2022.1"
 aiohttp = "^3.10.11"
 discord-ext-prometheus = "^0.2.0"
+httpx = "^0.28.1"
 
 [tool.poetry.dev-dependencies]
 black = "^24.3.0"
