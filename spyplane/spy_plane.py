@@ -15,7 +15,6 @@ from spyplane.constants import GUILD_ID, APPLICATION_ID, DB_PATH
 class SpyPlane(Bot):
     def __init__(self):
         intents = Intents.default()
-        intents.message_content = True
         super().__init__(command_prefix=when_mentioned_or('🕵'), intents=intents)
 
         self.db: Optional[Connection] = None
