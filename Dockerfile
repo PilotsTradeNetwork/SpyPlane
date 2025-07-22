@@ -1,4 +1,4 @@
-FROM python:3.10-slim-buster
+FROM python:3.10-slim-bookworm
 RUN apt update
 RUN apt-get install -qq -y jq sqlite3
 RUN mkdir /app
