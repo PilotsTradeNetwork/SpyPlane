@@ -1,6 +1,6 @@
 aiocron==1.8 ; python_version >= "3.10" and python_version < "4.0"
 aiohappyeyeballs==2.4.6 ; python_version >= "3.10" and python_version < "4.0"
-aiohttp==3.11.12 ; python_version >= "3.10" and python_version < "4.0"
+aiohttp==3.12.14 ; python_version >= "3.10" and python_version < "4.0"
 aiosignal==1.3.2 ; python_version >= "3.10" and python_version < "4.0"
 aiosqlite==0.17.0 ; python_version >= "3.10" and python_version < "4.0"
 anyio==4.9.0 ; python_version >= "3.10" and python_version < "4.0"
