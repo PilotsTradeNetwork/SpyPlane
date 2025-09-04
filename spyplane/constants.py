@@ -1,14 +1,16 @@
 import ast
 import os
+import sys
 
 from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
+is_test = 'unittest' in sys.modules
 
 flag_production = ast.literal_eval(os.environ.get('PRODUCTION', 'False'))
 
 # Common environment variables
-GDRIVE_TOKEN = os.path.join(os.getcwd(), 'workspace/token.json') if "/tests" not in os.getcwd() else os.path.join(os.getcwd(), '../token.json')  # CWD = /tests/ for tests
+GDRIVE_TOKEN = os.path.join(os.getcwd(), 'workspace/token.json')
 
 # Environment specific vars
 FACTION_SCOUT_ROLE_ID = 938507320214839306 if flag_production else 976913675355037716  # PTN MAIN or PTN TEST  @Faction-Scout: 987800734819024977
@@ -20,7 +22,7 @@ CONTROL_CHANNEL = int(os.getenv('PROD_SPY_PLANE_CHANNEL_ID')) if flag_production
     int(os.getenv('TEST_SPY_PLANE_CHANNEL_ID'))
 REPORT_CHANNEL = int(os.getenv('PROD_SPY_PLANE_REPORT_CHANNEL_ID')) if flag_production else \
     int(os.getenv('TEST_SPY_PLANE_REPORT_CHANNEL_ID'))
-DB_PATH = './test_workspace/spyplane.db' if 'tests' in os.getcwd() else './workspace/spyplane.db'
+DB_PATH = './tests/test_workspace/spyplane.db' if is_test else './workspace/spyplane.db'
 
 def log(msg):
     print(msg, flush=True)

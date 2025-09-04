@@ -11,10 +11,8 @@ class ConfigRepositoryTests(IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
         await bot.dbinit()
         self.subject = ConfigRepository()
-        await self.subject.begin()
 
     async def asyncTearDown(self):
-        await self.subject.rollback()
         await bot.dbclose()
 
     async def test_record_scout(self):
