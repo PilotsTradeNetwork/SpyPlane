@@ -5,6 +5,7 @@ token.json
 *.json
 *.jsonl
 !data/
+!db/data/system_names.csv
 !tests/test_data/*
 *.txt
 !requirements.txt

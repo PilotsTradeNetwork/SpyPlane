@@ -1,17 +1,19 @@
 tests/
 .idea/
+.github
+.venv
 *.iml
 *.csv
+!db/data/system_names.csv
 *.json
-*.txt
-!generated_requirements.txt
 !token.json
+*.txt
 *.db
 *.db-journal
 *.gz
 .gitignore
 .env
-
+.env.sample
 workspace/*
 !workspace/empty.txt
 
