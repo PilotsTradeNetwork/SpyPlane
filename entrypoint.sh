@@ -8,10 +8,9 @@ if [[ -z "${DB_RECREATE-}" ]]; then
 else
   echo "DB_RECREATE: ${DB_RECREATE} is defined, creating a new DB"
   rm -rf "$DB"
-  for file in ./db/migrations/*.sql; do
-    sqlite3 "$DB" < "$file"
-  done
-  sqlite3 "$DB" < ./db/data/spyplane_import.sql
+  sqlite3 "$DB" < ./db/schema.sql
+  7zr x -y db/data/system_names.csv.7z -odb/data/
+  sqlite3 "$DB" < ./db/data/import.sql
 fi
 
 python -m spyplane.main

@@ -1,8 +1,8 @@
 from typing import List
 from unittest import IsolatedAsyncioTestCase, mock
-from test_data import test_data
 
 from spyplane.services.ebgs_service import EliteBgsService
+from tests.test_data import test_data
 
 
 class EliteBgsServiceTests(IsolatedAsyncioTestCase):
