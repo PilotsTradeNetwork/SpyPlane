@@ -1,6 +1,6 @@
 FROM python:3.10-slim-bookworm
 RUN apt update
-RUN apt-get install -qq -y jq sqlite3
+RUN apt-get install -qq -y jq sqlite3 p7zip
 RUN mkdir /app
 WORKDIR /app
 ADD requirements.lock /app
