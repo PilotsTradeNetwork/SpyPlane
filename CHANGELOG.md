@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.4
+- update dependencies
+- zip systems file
+- add all bubble systems to database
+
 ## 0.0.3
 - updated tick source
 - changed docker base
