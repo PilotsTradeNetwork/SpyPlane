@@ -9,7 +9,7 @@ from discord import app_commands, Intents, Client, Object, Emoji
 from discord.abc import GuildChannel, PrivateChannel
 from discord.ext.commands import Bot, when_mentioned_or
 
-from spyplane.constants import GUILD_ID, APPLICATION_ID, DB_PATH
+from spyplane.constants import GUILD_ID, APPLICATION_ID, DB_PATH, log
 
 
 class SpyPlane(Bot):
@@ -27,13 +27,13 @@ class SpyPlane(Bot):
         discord_server_object = Object(id=GUILD_ID)
         self.tree.copy_global_to(guild=discord_server_object)
         await self.tree.sync(guild=discord_server_object)
-        print('commands synced')
+        log('commands synced')
         await self.dbinit()
 
     async def dbinit(self):
         self.db = await aiosqlite.connect(DB_PATH)
-        await self.db.set_trace_callback(print)
-        print('db open')
+        await self.db.set_trace_callback(log)
+        log('db open')
         sys.stdout.flush()
 
     async def close(self):
@@ -41,7 +41,7 @@ class SpyPlane(Bot):
         await super().close()  # Important! This will log the bot out.
 
     async def dbclose(self):
-        print('closing DB connection')
+        log('closing DB connection')
         if self.db:
             await self.db.close()
         sys.stdout.flush()

@@ -4,30 +4,21 @@ from discord.ext import tasks
 
 from spyplane.constants import log, log_exception
 from spyplane.database.config_repository import ConfigRepository
-from spyplane.services.daily_faction_state_service import DailyFactionStateService
-from spyplane.services.sync_service import SyncService
 from spyplane.services.systems_posting_service import SystemsPostingService
 from spyplane.services.tick_service import TickService
 from spyplane.spy_plane import bot
 
 
 class PostAfterTickService:
-    def __init__(self, sheets=SystemsPostingService(), sync=SyncService(), repo=ConfigRepository(), ticks=TickService(), daily=DailyFactionStateService()):
-        self.sheets: SystemsPostingService = sheets
+    def __init__(self, systems=SystemsPostingService(), repo=ConfigRepository(), ticks=TickService()):
+        self.systems: SystemsPostingService = systems
         self.repo: ConfigRepository = repo
-        self.sync: SyncService = sync
         self.tick_service: TickService = ticks
-        self.daily: DailyFactionStateService = daily
 
-    async def post_report(self):
-        log("Put up report")
-        await self.daily.notify_daily_news()
 
     async def post_systems(self):
-        log("Synchronizing with google sheets")
-        await self.sync.sync_db_sheet()
         log("Posting systems now")
-        await self.sheets.publish_systems_to_scout()
+        await self.systems.publish_systems_to_scout()
 
     async def run_after_interval(self, pre_launch_message: bool, interval_config_key: str, method_to_run):
         try:

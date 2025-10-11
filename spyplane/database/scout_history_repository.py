@@ -2,6 +2,7 @@ import time
 from datetime import datetime
 from typing import Optional
 
+from spyplane.constants import log
 from spyplane.database.base_repository import BaseRepository
 from spyplane.models.scout_history import ScoutHistory
 from spyplane.models.scout_system import ScoutSystem
@@ -23,7 +24,7 @@ class ScoutHistoryRepository(BaseRepository):
 
     async def record_scout(self, system: ScoutSystem, username, userid, ts=datetime.now()):
         await self.db().execute(insert_scout_history, (system.system, username, userid, time.mktime(ts.timetuple())))
-        print(f"Added history: {system.system}, {username}, {userid}, {ts}")
+        log(f"Added history: {system.system}, {username}, {userid}, {ts}")
 
     async def get_history(self, system: Optional[str] = None, username: Optional[str] = None, userid: Optional[int] = None):
         params = []
