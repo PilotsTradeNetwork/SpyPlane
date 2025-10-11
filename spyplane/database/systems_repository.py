@@ -1,16 +1,18 @@
 from typing import List
+from datetime import datetime
 
+from spyplane.constants import log
 from spyplane.database.base_repository import BaseRepository
 from spyplane.models.scout_system import ScoutSystem
 
 insert_scout_system = '''
-insert into scout_systems (system_name, priority, rownum) values (?,?,?);
+insert into scout_systems (system_name, priority, added_by, added_at) values (?,?,?,?);
 '''
 insert_post_system = '''
-insert or ignore into scout_systems_posted (system_name, priority, rownum) values (?,?,?);
+insert or ignore into scout_systems_posted (system_name, priority) values (?,?);
 '''
 update_post_system = '''
-update scout_systems_posted set priority=?, rownum=? where system_name=?;
+update scout_systems_posted set priority=? where system_name=?;
 '''
 select_scout_system = '''
 select *
@@ -18,13 +20,6 @@ from scout_systems
 where system_name=?;
 '''
 
-get_valid_systems_query = '''
-select s.system_name, s.priority, s.rownum
-from scout_systems s
-join systems m on s.system_name = m.name
-where s.priority != '' and printf("%d", s.priority) = s.priority
-order by rownum
-'''
 
 get_is_valid_system_query = '''
 select name
@@ -45,27 +40,11 @@ delete from scout_systems_posted
 '''
 
 get_post_systems = '''
-select s.system_name, s.priority, s.rownum
+select s.system_name, s.priority
 from scout_systems_posted s
 '''
 
-get_invalid_systems_query = '''
-select ss.system_name, ss.priority, ss.rownum
-from scout_systems ss
-left join (
-%s
-) m on ss.system_name = m.system_name
-where m.system_name is null;
-'''
-
-
 class SystemsRepository(BaseRepository):
-
-    async def get_invalid_systems(self) -> List[ScoutSystem]:
-        return await self.get_systems(get_invalid_systems_query % get_valid_systems_query)
-
-    async def get_valid_systems(self) -> List[ScoutSystem]:
-        return await self.get_systems(get_valid_systems_query)
     
     async def is_valid_system(self, system: str) -> bool:
         async with self.db().execute(get_is_valid_system_query, [system]) as cur:
@@ -78,7 +57,7 @@ class SystemsRepository(BaseRepository):
     async def get_system(self, system_name) -> ScoutSystem:
         async with self.db().execute(select_scout_system, [system_name]) as cur:
             row = await cur.fetchone()
-        return ScoutSystem(row[0], row[1], row[2])
+        return ScoutSystem(row[0], row[1], row[2], row[3])
 
     async def purge_scout_systems(self) -> None:
         await self.db().execute(purge_scout)
@@ -90,17 +69,23 @@ class SystemsRepository(BaseRepository):
 
     async def remove_scouted(self, system_name) -> None:
         await self.db().execute(remove_scouted_system, [system_name])
-        print(f"Removed scout: {system_name}")
+        log(f"Removed scout: {system_name}")
 
     async def get_systems(self, query) -> List[ScoutSystem]:
         async with self.db().execute(query) as cur:
             rows = await cur.fetchall()
-        return [ScoutSystem(row[0], row[1], row[2]) for row in rows]
+        # Handle different query result formats
+        if len(rows) > 0 and len(rows[0]) == 4:  # scout_systems table (system_name, priority, added_by, added_at)
+            return [ScoutSystem(row[0], row[1], row[2], row[3]) for row in rows]
+        elif len(rows) > 0 and len(rows[0]) == 2:  # scout_systems_posted table (system_name, priority)
+            return [ScoutSystem(row[0], row[1], "posted", 0) for row in rows]
+        else:
+            return []
 
     async def write_system_to_post(self, systems_to_scout: List[ScoutSystem]):
         await self.begin()
-        array_of_tuples = [(system.system, system.priority, system.rownum) for system in systems_to_scout]
-        array_of_tuples_update = [(system.priority, system.rownum, system.system) for system in systems_to_scout]
+        array_of_tuples = [(system.system, system.priority) for system in systems_to_scout]
+        array_of_tuples_update = [(system.priority, system.system) for system in systems_to_scout]
         await self.db().executemany(insert_post_system, array_of_tuples)
         await self.db().executemany(update_post_system, array_of_tuples_update)
         await self.commit()
@@ -109,9 +94,34 @@ class SystemsRepository(BaseRepository):
         systems_to_write = self.remove_duplicates(systems_to_scout)
         await self.begin()
         await self.purge_scout_systems()
-        array_of_tuples = [(system.system, system.priority, system.rownum) for system in systems_to_write]
+        array_of_tuples = [(system.system, system.priority, system.added_by, system.added_at) for system in systems_to_write]
         await self.db().executemany(insert_scout_system, array_of_tuples)
         await self.commit()
+
+    async def add_system(self, system_name: str, priority: str, added_by: str) -> bool:
+        """Add a system to track. Returns True if added, False if already exists."""
+        try:
+            await self.db().execute(insert_scout_system, [system_name, priority, added_by, int(datetime.now().timestamp())])
+            await self.commit()
+            return True
+        except Exception as e:
+            log(f"Error adding system {system_name}: {e}")
+            return False
+
+    async def remove_system(self, system_name: str) -> bool:
+        """Remove a system from tracking. Returns True if removed, False if not found."""
+        try:
+            cursor = await self.db().execute("DELETE FROM scout_systems WHERE system_name = ?", [system_name])
+            await self.commit()
+            return cursor.rowcount > 0
+        except Exception as e:
+            log(f"Error removing system {system_name}: {e}")
+            return False
+
+    async def get_all_tracked_systems(self) -> List[ScoutSystem]:
+        """Get all tracked systems regardless of validity."""
+        query = "SELECT system_name, priority, added_by, added_at FROM scout_systems ORDER BY added_at"
+        return await self.get_systems(query)
 
     @staticmethod
     def remove_duplicates(systems_to_scout):

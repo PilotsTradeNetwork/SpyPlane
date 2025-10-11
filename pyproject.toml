@@ -9,7 +9,6 @@ dependencies = [
     "python-dotenv==0.21.1",
     "discord-py==2.6.3",
     "aiosqlite==0.21.0",
-    "gspread==5.12.4",
     "aiocron==1.8",
     "jq==1.10.0",
     "pytz==2022.7.1",
@@ -21,4 +20,15 @@ requires-python = ">=3.10"
 
 [project.scripts]
 spy = "spyplane.main:run"
+test = "spyplane.test_runner:run_tests"
+
+[tool.uv]
+package = true
+
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["spyplane*"]
 

@@ -9,8 +9,9 @@ DROP TABLE IF EXISTS scout_systems;
 CREATE TABLE scout_systems
 (
     "system_name" TEXT PRIMARY KEY,
-    "priority"    INTEGER,
-    "rownum"      INTEGER
+    "priority"    TEXT NOT NULL,
+    "added_by"    TEXT NOT NULL,
+    "added_at"    INTEGER NOT NULL
 );
 
 -- Schema for the scout_history table
@@ -36,8 +37,7 @@ CREATE TABLE IF NOT EXISTS configuration
 CREATE TABLE IF NOT EXISTS scout_systems_posted
 (
     "system_name" TEXT PRIMARY KEY,
-    "priority"    INTEGER,
-    "rownum"      INTEGER
+    "priority"    TEXT NOT NULL
 );
 
 -- Consolidated inserts for the configuration table

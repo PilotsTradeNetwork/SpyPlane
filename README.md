@@ -10,25 +10,54 @@ Scouting bot
 
 ## Local devbox setup
 
+### Option 1: Modern uv approach (recommended)
+1. Install [uv using instructions here](https://github.com/astral-sh/uv#installation)
+2. Install dependencies: `uv sync`
+3. Copy `.env.sample` to `.env` and update the values for TEST and PROD
+4. Startup the bot with `uv run spy` or `uv run python -m spyplane.main`
+
+### Option 2: Manual virtual environment
 1. Install [uv using instructions here](https://github.com/astral-sh/uv#installation)
 2. Create a virtual environment: `uv venv`
 3. Activate the virtual environment: `source .venv/bin/activate`
 4. Install dependencies: `uv pip sync requirements.lock`
 5. Copy `.env.sample` to `.env` and update the values for TEST and PROD
-6. Contact the dev team to get the token.json that allows connecting to Google Sheets API,
-and place it in the repo root.
-7. Startup the bot with `python -m spyplane.main`
+6. Startup the bot with `uv run spy` or `uv run python -m spyplane.main`
 
-## Google Drive Setup
+## System Tracking
 
-Follow [gspread instructions](https://docs.gspread.org/en/latest/oauth2.html)
-to connect to google sheet from your drive
+The bot now tracks systems directly in the SQLite database. Use the following Discord commands:
+
+- `/faction_track <system_name> <priority>` - Add a system to track (Primary, Secondary, or Tertiary)
+- `/faction_remove <system_name>` - Remove a system from tracking  
+- `/faction_list` - List all currently tracked systems
+
+**Note**: Systems are validated against the `systems` table when added via `/faction_track`. Only valid systems can be tracked.
+
+## Database Seeding
+
+The database comes pre-seeded with test data from `db/data/test_data.csv`:
+- **312 tracked systems** with priority distribution:
+  - Primary: 28 systems
+  - Secondary: 95 systems  
+  - Tertiary: 189 systems
+- All systems are validated against the `systems` table (882,136 total systems)
+
+To re-seed the database with test data, run:
+```bash
+cd db/data && python3 seed_database.py
+```
+
 
 ## Running tests
 
 From the repo root
 
 ```bash
+# Using uv (recommended)
+uv run python -m unittest discover tests -v
+
+# Or using python directly
 python -m unittest
 ```
 
