@@ -1,39 +1,40 @@
 import sys
 from asyncio import Lock
 from threading import Thread
-from typing import Optional, Union
 
 import aiosqlite
 from aiosqlite import Connection
-from discord import app_commands, Intents, Client, Object, Emoji
+from discord import Intents, Object, Emoji
 from discord.abc import GuildChannel, PrivateChannel
 from discord.ext.commands import Bot, when_mentioned_or
 
-from spyplane.constants import GUILD_ID, APPLICATION_ID, DB_PATH, log
+from spyplane.constants import GUILD_ID, DB_PATH, log
 
 
 class SpyPlane(Bot):
     def __init__(self):
         intents = Intents.default()
-        super().__init__(command_prefix=when_mentioned_or('🕵'), intents=intents)
+        super().__init__(command_prefix=when_mentioned_or("🕵"), intents=intents)
 
-        self.db: Optional[Connection] = None
-        self.lock: Optional[Lock] = None
-        self.emoji_bullseye: Optional[Emoji] = None
-        self.channel: Optional[Union[GuildChannel, Thread, PrivateChannel]] = None
-        self.report_channel: Optional[Union[GuildChannel, Thread, PrivateChannel]] = None
+        self.db: Connection | None = None
+        self.lock: Lock | None = None
+        self.emoji_bullseye: Emoji | None = None
+        self.channel: GuildChannel | Thread | PrivateChannel | None = None
+        self.report_channel: GuildChannel | Thread | PrivateChannel | None = (
+            None
+        )
 
     async def setup_hook(self):
         discord_server_object = Object(id=GUILD_ID)
         self.tree.copy_global_to(guild=discord_server_object)
         await self.tree.sync(guild=discord_server_object)
-        log('commands synced')
+        log("commands synced")
         await self.dbinit()
 
     async def dbinit(self):
         self.db = await aiosqlite.connect(DB_PATH)
         await self.db.set_trace_callback(log)
-        log('db open')
+        log("db open")
         sys.stdout.flush()
 
     async def close(self):
@@ -41,7 +42,7 @@ class SpyPlane(Bot):
         await super().close()  # Important! This will log the bot out.
 
     async def dbclose(self):
-        log('closing DB connection')
+        log("closing DB connection")
         if self.db:
             await self.db.close()
         sys.stdout.flush()

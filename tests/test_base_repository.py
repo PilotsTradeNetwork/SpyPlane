@@ -5,7 +5,6 @@ from spyplane.spy_plane import bot
 
 
 class BaseRepositoryTests(IsolatedAsyncioTestCase):
-
     async def asyncSetUp(self) -> None:
         await bot.dbinit()
         self.subject = ConfigRepository()

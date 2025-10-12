@@ -1,6 +1,5 @@
 import asyncio
 from datetime import datetime, timezone
-from typing import Optional
 
 import httpx
 
@@ -8,7 +7,7 @@ from spyplane.constants import log
 
 
 class TickService:
-    def __init__(self, current_tick: Optional[int] = None):
+    def __init__(self, current_tick: int | None = None):
         self.current_tick: int = current_tick or asyncio.run(self.fetch_current_tick())
         log(f"Current Tick: {self.current_tick}")
         assert self.current_tick
@@ -25,12 +24,11 @@ class TickService:
             return False
         tick_changed = self.current_tick != new_tick
         if tick_changed:
-            log(f'Tick detected: Current {self.current_tick}, New {new_tick}')
+            log(f"Tick detected: Current {self.current_tick}, New {new_tick}")
             self.current_tick = new_tick
         else:
-            log('No new tick')
+            log("No new tick")
         return tick_changed
-
 
     @staticmethod
     async def fetch_current_tick() -> int:
@@ -39,6 +37,8 @@ class TickService:
             resp = await client.get(link)
             resp.raise_for_status()
             tick_info = resp.json()
-        dt = datetime.fromisoformat(tick_info["lastGalaxyTick"].rstrip("Z"))  # python >= 3.11 understands timezone
+        dt = datetime.fromisoformat(
+            tick_info["lastGalaxyTick"].rstrip("Z")
+        )  # python >= 3.11 understands timezone
         dt = dt.replace(tzinfo=timezone.utc)
         return int(dt.timestamp())
