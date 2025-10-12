@@ -6,8 +6,9 @@ from spyplane.spy_plane import bot
 
 
 class ScoutRecordingService:
-
-    def __init__(self, systems_repo=SystemsRepository(), history_repo=ScoutHistoryRepository()):
+    def __init__(
+        self, systems_repo=SystemsRepository(), history_repo=ScoutHistoryRepository()
+    ):
         self.systems_repo = systems_repo
         self.history_repo = history_repo
 

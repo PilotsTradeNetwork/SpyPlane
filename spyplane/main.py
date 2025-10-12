@@ -19,5 +19,5 @@ async def spyplane():
     await bot.start(TOKEN)
 
 
-if __name__=='__main__':
+if __name__ == "__main__":
     run()

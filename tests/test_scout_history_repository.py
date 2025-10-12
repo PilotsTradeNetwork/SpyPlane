@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-from typing import List
 from unittest import IsolatedAsyncioTestCase
 
 from spyplane.database.scout_history_repository import ScoutHistoryRepository
@@ -9,7 +8,6 @@ from spyplane.spy_plane import bot
 
 
 class ScoutHistoryRepositoryTests(IsolatedAsyncioTestCase):
-
     async def asyncSetUp(self) -> None:
         await bot.dbinit()
         self.subject = ScoutHistoryRepository()
@@ -19,8 +17,15 @@ class ScoutHistoryRepositoryTests(IsolatedAsyncioTestCase):
         await bot.dbclose()
 
     async def test_record_scout(self):
-        await self.subject.record_scout(ScoutSystem('Volowahku', '1', 3), "zaszrespawned", 354990093980663889, datetime.now())
-        history: List[ScoutHistory] = await self.subject.get_history(username="zaszrespawned")
+        await self.subject.record_scout(
+            ScoutSystem("Volowahku", "1", 3),
+            "zaszrespawned",
+            354990093980663889,
+            datetime.now(),
+        )
+        history: list[ScoutHistory] = await self.subject.get_history(
+            username="zaszrespawned"
+        )
         for scout in history:
             print(scout)
         self.assertEqual(len(history), 1)

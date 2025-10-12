@@ -6,7 +6,6 @@ from spyplane.spy_plane import bot
 
 
 class BaseRepository:
-
     def db(self) -> Connection:
         return bot.db
 
@@ -15,7 +14,7 @@ class BaseRepository:
         try:
             await bot.db.execute("BEGIN")
         except OperationalError as e:
-            if str(e)=="cannot start a transaction within a transaction":
+            if str(e) == "cannot start a transaction within a transaction":
                 await bot.db.execute("END TRANSACTION")
                 await bot.db.execute("BEGIN")
 
