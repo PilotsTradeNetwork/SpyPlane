@@ -138,6 +138,68 @@ class SystemsRepository(BaseRepository):
         query = "SELECT system_name, priority, added_by, added_at FROM scout_systems ORDER BY added_at"
         return await self.get_systems(query)
 
+    async def bulk_add_systems(self, systems_data: list[tuple[str, str, str]]) -> tuple[int, int]:
+        """
+        Bulk add systems to tracking
+        Args:
+            systems_data: List of (system_name, priority, added_by) tuples
+        Returns:
+            Tuple of (successful_adds, failed_adds)
+        """
+        successful = 0
+        failed = 0
+        
+        for system_name, priority, added_by in systems_data:
+            try:
+                success = await self.add_system(system_name, priority, added_by)
+                if success:
+                    successful += 1
+                else:
+                    failed += 1
+            except Exception as e:
+                log(f"Error adding system {system_name}: {e}")
+                failed += 1
+                
+        return successful, failed
+
+    async def bulk_remove_systems(self, system_names: list[str]) -> tuple[int, int]:
+        """
+        Bulk remove systems from tracking
+        Args:
+            system_names: List of system names to remove
+        Returns:
+            Tuple of (successful_removes, failed_removes)
+        """
+        successful = 0
+        failed = 0
+        
+        for system_name in system_names:
+            try:
+                success = await self.remove_system(system_name)
+                if success:
+                    successful += 1
+                else:
+                    failed += 1
+            except Exception as e:
+                log(f"Error removing system {system_name}: {e}")
+                failed += 1
+                
+        return successful, failed
+
+    async def remove_all_by_priority(self, priority: str) -> int:
+        """
+        Remove all systems of a specific priority
+        Args:
+            priority: Priority level to remove (Primary, Secondary, Tertiary)
+        Returns:
+            Number of systems removed
+        """
+        query = "DELETE FROM scout_systems WHERE priority = ?"
+        await self.begin()
+        cursor = await self.db().execute(query, [priority])
+        await self.commit()
+        return cursor.rowcount
+
     @staticmethod
     def remove_duplicates(systems_to_scout):
         sys_names, systems_to_write = [], []

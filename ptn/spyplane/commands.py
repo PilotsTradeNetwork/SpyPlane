@@ -165,7 +165,8 @@ async def run_export_script():
 
 @bot.tree.command(name="faction_track")
 @app_commands.describe(
-    system_name="Name of the system to track", priority="Priority level for tracking"
+    system_names="Comma-separated list of system names to track (max 10 systems)", 
+    priority="Priority level for tracking"
 )
 @app_commands.choices(
     priority=[
@@ -174,46 +175,124 @@ async def run_export_script():
         Choice(name="Tertiary", value="Tertiary"),
     ]
 )
-async def faction_track(interaction: Interaction, system_name: str, priority: str):
-    """Add a system to track for faction scouting"""
+async def faction_track(interaction: Interaction, system_names: str, priority: str):
+    """Add systems to track for faction scouting (single or multiple systems)"""
     await interaction.response.defer()
 
     repo = SystemsRepository()
 
-    # Validate that the system exists in the systems table
-    is_valid = await repo.is_valid_system(system_name)
-    if not is_valid:
-        await interaction.followup.send(
-            f"❌ **{system_name}** is not a valid system in our database."
-        )
-        return
+    try:
+        # Parse comma-separated system names
+        system_list = [name.strip() for name in system_names.split(',') if name.strip()]
+        
+        if len(system_list) == 0:
+            await interaction.followup.send("❌ No valid systems found in the list.")
+            return
+            
+        if len(system_list) > 10:
+            await interaction.followup.send("❌ Maximum 10 systems allowed per command.")
+            return
 
-    success = await repo.add_system(system_name, priority, interaction.user.name)
+        # Validate all systems first
+        invalid_systems = []
+        for system_name in system_list:
+            is_valid = await repo.is_valid_system(system_name)
+            if not is_valid:
+                invalid_systems.append(system_name)
+        
+        if invalid_systems:
+            await interaction.followup.send(f"❌ Invalid systems found: {', '.join(invalid_systems)}")
+            return
 
-    if success:
-        await interaction.followup.send(
-            f"✅ Added **{system_name}** to tracking with **{priority}** priority"
-        )
-    else:
-        await interaction.followup.send(
-            f"❌ Failed to add **{system_name}**. It may already be tracked."
-        )
+        # Prepare systems data (all with same priority)
+        systems_data = [(system_name, priority, interaction.user.name) for system_name in system_list]
+
+        # Bulk add systems
+        successful, failed = await repo.bulk_add_systems(systems_data)
+        
+        if successful > 0:
+            message = f"✅ Added {successful} systems to tracking with **{priority}** priority"
+            if failed > 0:
+                message += f" ({failed} failed)"
+            await interaction.followup.send(message)
+        else:
+            await interaction.followup.send("❌ Failed to add any systems.")
+            
+    except Exception as e:
+        log(f"Error processing system names: {e}")
+        await interaction.followup.send("❌ Error processing system names.")
 
 
 @bot.tree.command(name="faction_remove")
-@app_commands.describe(system_name="Name of the system to remove from tracking")
-async def faction_remove(interaction: Interaction, system_name: str):
-    """Remove a system from faction scouting tracking"""
+@app_commands.describe(
+    system_names="Comma-separated list of system names to remove from tracking (max 10 systems)"
+)
+async def faction_remove(interaction: Interaction, system_names: str):
+    """Remove systems from faction scouting tracking (single or multiple systems)"""
     await interaction.response.defer()
 
     repo = SystemsRepository()
-    success = await repo.remove_system(system_name)
 
-    if success:
-        await interaction.followup.send(f"✅ Removed **{system_name}** from tracking")
-    else:
+    try:
+        # Parse comma-separated system names
+        system_list = [name.strip() for name in system_names.split(',') if name.strip()]
+        
+        if len(system_list) == 0:
+            await interaction.followup.send("❌ No valid systems found in the list.")
+            return
+            
+        if len(system_list) > 10:
+            await interaction.followup.send("❌ Maximum 10 systems allowed per command.")
+            return
+
+        # Bulk remove systems
+        successful, failed = await repo.bulk_remove_systems(system_list)
+        
+        if successful > 0:
+            message = f"✅ Removed {successful} systems from tracking"
+            if failed > 0:
+                message += f" ({failed} not found)"
+            await interaction.followup.send(message)
+        else:
+            await interaction.followup.send("❌ No systems were removed.")
+            
+    except Exception as e:
+        log(f"Error processing system names: {e}")
+        await interaction.followup.send("❌ Error processing system names.")
+
+
+@bot.tree.command(name="faction_removeall")
+@app_commands.describe(priority="Priority level to remove all systems from")
+@app_commands.choices(
+    priority=[
+        Choice(name="Primary", value="Primary"),
+        Choice(name="Secondary", value="Secondary"),
+        Choice(name="Tertiary", value="Tertiary"),
+    ]
+)
+async def faction_removeall(interaction: Interaction, priority: str):
+    """Remove all systems of a specific priority from tracking"""
+    await interaction.response.defer()
+
+    repo = SystemsRepository()
+    
+    try:
+        # Remove all systems of the specified priority
+        deleted_count = await repo.remove_all_by_priority(priority)
+        
+        if deleted_count > 0:
+            await interaction.followup.send(
+                f"✅ Removed all **{priority}** systems from tracking ({deleted_count} systems deleted)"
+            )
+        else:
+            await interaction.followup.send(
+                f"ℹ️ No **{priority}** systems found in tracking"
+            )
+            
+    except Exception as e:
+        log(f"Error removing all {priority} systems: {e}")
         await interaction.followup.send(
-            f"❌ **{system_name}** was not found in tracked systems"
+            f"❌ Error removing all **{priority}** systems from tracking"
         )
 
 

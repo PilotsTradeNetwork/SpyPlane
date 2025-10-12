@@ -14,7 +14,9 @@ Scouting bot
 1. Install [uv using instructions here](https://github.com/astral-sh/uv#installation)
 2. Install dependencies: `uv sync`
 3. Copy `.env.sample` to `.env` and update the values for TEST and PROD
-4. Startup the bot with `uv run spy` or `uv run python -m spyplane.main`
+4. **Create the database**: `./db/recreate.sh`
+5. **Seed with test data**: `cd db/data && uv run python seed_database.py`
+6. Startup the bot with `uv run spy` or `uv run python -m spyplane.main`
 
 ### Option 2: Manual virtual environment
 1. Install [uv using instructions here](https://github.com/astral-sh/uv#installation)
@@ -22,7 +24,9 @@ Scouting bot
 3. Activate the virtual environment: `source .venv/bin/activate`
 4. Install dependencies: `uv pip sync requirements.lock`
 5. Copy `.env.sample` to `.env` and update the values for TEST and PROD
-6. Startup the bot with `uv run spy` or `uv run python -m spyplane.main`
+6. **Create the database**: `./db/recreate.sh`
+7. **Seed with test data**: `cd db/data && python seed_database.py`
+8. Startup the bot with `uv run spy` or `uv run python -m spyplane.main`
 
 ## System Tracking
 
@@ -33,21 +37,6 @@ The bot now tracks systems directly in the SQLite database. Use the following Di
 - `/faction_list` - List all currently tracked systems
 
 **Note**: Systems are validated against the `systems` table when added via `/faction_track`. Only valid systems can be tracked.
-
-## Database Seeding
-
-The database comes pre-seeded with test data from `db/data/test_data.csv`:
-- **312 tracked systems** with priority distribution:
-  - Primary: 28 systems
-  - Secondary: 95 systems  
-  - Tertiary: 189 systems
-- All systems are validated against the `systems` table (882,136 total systems)
-
-To re-seed the database with test data, run:
-```bash
-cd db/data && python3 seed_database.py
-```
-
 
 ## Running tests
 
