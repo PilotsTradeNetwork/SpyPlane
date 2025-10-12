@@ -1,7 +1,7 @@
 import unittest
 
-from spyplane.services.systems_posting_service import SystemsPostingService
-from spyplane.models.scout_system import ScoutSystem
+from ptn.spyplane.services.systems_posting_service import SystemsPostingService
+from ptn.spyplane.models.scout_system import ScoutSystem
 
 
 class SystemsPostingServiceTests(unittest.TestCase):

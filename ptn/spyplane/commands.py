@@ -4,12 +4,12 @@ from discord import Interaction, app_commands
 from discord.app_commands import Choice
 import discord
 
-from spyplane._metadata import __version__
-from spyplane.constants import log
-from spyplane.services.config_service import ConfigService
-from spyplane.services.systems_posting_service import SystemsPostingService
-from spyplane.database.systems_repository import SystemsRepository
-from spyplane.spy_plane import bot
+from ptn.spyplane._metadata import __version__
+from ptn.spyplane.constants import log
+from ptn.spyplane.services.config_service import ConfigService
+from ptn.spyplane.services.systems_posting_service import SystemsPostingService
+from ptn.spyplane.database.systems_repository import SystemsRepository
+from ptn.spyplane.spy_plane import bot
 
 
 class Commands:

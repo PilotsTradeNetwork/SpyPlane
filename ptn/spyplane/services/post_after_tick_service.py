@@ -2,11 +2,11 @@ import asyncio
 
 from discord.ext import tasks
 
-from spyplane.constants import log, log_exception
-from spyplane.database.config_repository import ConfigRepository
-from spyplane.services.systems_posting_service import SystemsPostingService
-from spyplane.services.tick_service import TickService
-from spyplane.spy_plane import bot
+from ptn.spyplane.constants import log, log_exception
+from ptn.spyplane.database.config_repository import ConfigRepository
+from ptn.spyplane.services.systems_posting_service import SystemsPostingService
+from ptn.spyplane.services.tick_service import TickService
+from ptn.spyplane.spy_plane import bot
 
 
 class PostAfterTickService:

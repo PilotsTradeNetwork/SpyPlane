@@ -8,7 +8,7 @@ from discord import Intents, Object, Emoji
 from discord.abc import GuildChannel, PrivateChannel
 from discord.ext.commands import Bot, when_mentioned_or
 
-from spyplane.constants import GUILD_ID, DB_PATH, log
+from ptn.spyplane.constants import GUILD_ID, DB_PATH, log
 
 
 class SpyPlane(Bot):

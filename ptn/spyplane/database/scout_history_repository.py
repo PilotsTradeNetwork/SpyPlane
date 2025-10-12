@@ -1,10 +1,10 @@
 import time
 from datetime import datetime
 
-from spyplane.constants import log
-from spyplane.database.base_repository import BaseRepository
-from spyplane.models.scout_history import ScoutHistory
-from spyplane.models.scout_system import ScoutSystem
+from ptn.spyplane.constants import log
+from ptn.spyplane.database.base_repository import BaseRepository
+from ptn.spyplane.models.scout_history import ScoutHistory
+from ptn.spyplane.models.scout_system import ScoutSystem
 
 insert_scout_history = """
 insert into scout_history (system_name, username, userid, timestamp) values (?,?,?,?);

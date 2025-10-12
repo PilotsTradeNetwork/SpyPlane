@@ -1,5 +1,5 @@
 [project]
-name = "spyplane"
+name = "ptn-spyplane"
 version = "0.1.0"
 description = "PTN Spy Plane"
 authors = [
@@ -25,10 +25,10 @@ dev = [
 ]
 
 [project.scripts]
-spy = "spyplane.main:run"
-lint = "spyplane.ruff_commands:lint"
-format = "spyplane.ruff_commands:format_code"
-lint-fix = "spyplane.ruff_commands:lint_fix"
+spy = "ptn.spyplane.main:run"
+lint = "ptn.spyplane.ruff_commands:lint"
+format = "ptn.spyplane.ruff_commands:format_code"
+lint-fix = "ptn.spyplane.ruff_commands:lint_fix"
 
 [tool.uv]
 package = true
@@ -38,7 +38,7 @@ requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["spyplane*"]
+include = ["ptn*"]
 
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.

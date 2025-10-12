@@ -1,7 +1,7 @@
 from unittest import IsolatedAsyncioTestCase
 
-from spyplane.database.config_repository import ConfigRepository
-from spyplane.spy_plane import bot
+from ptn.spyplane.database.config_repository import ConfigRepository
+from ptn.spyplane.spy_plane import bot
 
 
 class BaseRepositoryTests(IsolatedAsyncioTestCase):

@@ -1,8 +1,8 @@
 import time
 from datetime import datetime
 
-from spyplane.database.base_repository import BaseRepository
-from spyplane.models.config import Config
+from ptn.spyplane.database.base_repository import BaseRepository
+from ptn.spyplane.models.config import Config
 
 update_config = """
 update configuration

@@ -1,10 +1,10 @@
 from datetime import datetime, timezone
 from unittest import IsolatedAsyncioTestCase
 
-from spyplane.database.scout_history_repository import ScoutHistoryRepository
-from spyplane.models.scout_history import ScoutHistory
-from spyplane.models.scout_system import ScoutSystem
-from spyplane.spy_plane import bot
+from ptn.spyplane.database.scout_history_repository import ScoutHistoryRepository
+from ptn.spyplane.models.scout_history import ScoutHistory
+from ptn.spyplane.models.scout_system import ScoutSystem
+from ptn.spyplane.spy_plane import bot
 
 
 class ScoutHistoryRepositoryTests(IsolatedAsyncioTestCase):

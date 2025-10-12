@@ -1,7 +1,7 @@
 from datetime import datetime
 from unittest import IsolatedAsyncioTestCase
 
-from spyplane.services.post_after_tick_service import PostAfterTickService
+from ptn.spyplane.services.post_after_tick_service import PostAfterTickService
 
 
 class PostAfterTickServiceTests(IsolatedAsyncioTestCase):

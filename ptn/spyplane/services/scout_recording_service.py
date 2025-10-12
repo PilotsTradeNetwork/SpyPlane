@@ -1,8 +1,8 @@
 from datetime import datetime
-from spyplane.constants import log
-from spyplane.database.scout_history_repository import ScoutHistoryRepository
-from spyplane.database.systems_repository import SystemsRepository
-from spyplane.spy_plane import bot
+from ptn.spyplane.constants import log
+from ptn.spyplane.database.scout_history_repository import ScoutHistoryRepository
+from ptn.spyplane.database.systems_repository import SystemsRepository
+from ptn.spyplane.spy_plane import bot
 
 
 class ScoutRecordingService:
