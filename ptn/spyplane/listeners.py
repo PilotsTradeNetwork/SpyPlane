@@ -2,17 +2,17 @@ import asyncio
 
 from discord import RawReactionActionEvent, Message
 
-from spyplane._metadata import __version__
-from spyplane.constants import (
+from ptn.spyplane._metadata import __version__
+from ptn.spyplane.constants import (
     CONTROL_CHANNEL,
     REPORT_CHANNEL,
     EMOJI_TARGET,
     log,
     log_exception,
 )
-from spyplane.services.post_after_tick_service import PostAfterTickService
-from spyplane.services.scout_recording_service import ScoutRecordingService
-from spyplane.spy_plane import bot
+from ptn.spyplane.services.post_after_tick_service import PostAfterTickService
+from ptn.spyplane.services.scout_recording_service import ScoutRecordingService
+from ptn.spyplane.spy_plane import bot
 
 
 class Listeners:

@@ -4,8 +4,8 @@ from datetime import datetime
 import discord
 from discord import Color, Embed
 
-from spyplane.database.config_repository import ConfigRepository
-from spyplane.database.systems_repository import SystemsRepository
+from ptn.spyplane.database.config_repository import ConfigRepository
+from ptn.spyplane.database.systems_repository import SystemsRepository
 
 
 class ConfigService:

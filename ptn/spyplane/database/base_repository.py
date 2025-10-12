@@ -2,7 +2,7 @@ from sqlite3 import OperationalError
 
 from aiosqlite import Connection
 
-from spyplane.spy_plane import bot
+from ptn.spyplane.spy_plane import bot
 
 
 class BaseRepository:

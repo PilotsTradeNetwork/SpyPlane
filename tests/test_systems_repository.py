@@ -1,7 +1,7 @@
 from unittest import IsolatedAsyncioTestCase
 
-from spyplane.database.systems_repository import SystemsRepository
-from spyplane.spy_plane import bot
+from ptn.spyplane.database.systems_repository import SystemsRepository
+from ptn.spyplane.spy_plane import bot
 
 
 class SystemsRepositoryTests(IsolatedAsyncioTestCase):

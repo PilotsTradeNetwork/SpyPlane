@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 import httpx
 
-from spyplane.constants import log
+from ptn.spyplane.constants import log
 
 
 class TickService:

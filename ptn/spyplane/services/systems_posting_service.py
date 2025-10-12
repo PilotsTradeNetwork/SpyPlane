@@ -2,11 +2,11 @@ import datetime
 
 import discord.message
 
-from spyplane.constants import FACTION_SCOUT_ROLE_ID, log
-from spyplane.database.config_repository import ConfigRepository
-from spyplane.database.systems_repository import SystemsRepository
-from spyplane.models.scout_system import ScoutSystem
-from spyplane.spy_plane import bot
+from ptn.spyplane.constants import FACTION_SCOUT_ROLE_ID, log
+from ptn.spyplane.database.config_repository import ConfigRepository
+from ptn.spyplane.database.systems_repository import SystemsRepository
+from ptn.spyplane.models.scout_system import ScoutSystem
+from ptn.spyplane.spy_plane import bot
 
 
 class SystemsPostingService:
@@ -94,14 +94,14 @@ class SystemsPostingService:
                 log("[ERROR] bot.channel is None - cannot purge")
                 return
 
-            await bot.channel.purge(limit=1000, check=self.is_not_pinned_message)
+            await bot.channel.purge(limit=None, check=self.is_not_pinned_message)
         except Exception as e:
             log(f"[ERROR] channel.purge failed: {e}")
 
             # Try alternative approach - delete messages individually
             try:
                 messages = []
-                async for message in bot.channel.history(limit=1000):
+                async for message in bot.channel.history(limit=None):
                     if not message.pinned:
                         messages.append(message)
 

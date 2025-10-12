@@ -2,10 +2,10 @@ import asyncio
 
 from discord.ext.prometheus import PrometheusCog
 
-from spyplane.commands import Commands
-from spyplane.constants import TOKEN
-from spyplane.listeners import Listeners
-from spyplane.spy_plane import bot
+from ptn.spyplane.commands import Commands
+from ptn.spyplane.constants import TOKEN
+from ptn.spyplane.listeners import Listeners
+from ptn.spyplane.spy_plane import bot
 
 
 def run():
