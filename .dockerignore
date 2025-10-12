@@ -4,7 +4,8 @@ tests/
 .venv
 *.iml
 *.csv
-!db/data/system_names.csv
+!db/data/system_names.csv.7z
+!db/data/test_data.csv.7z
 *.json
 !token.json
 *.txt
