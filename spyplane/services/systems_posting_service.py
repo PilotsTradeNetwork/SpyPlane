@@ -23,7 +23,7 @@ class SystemsPostingService:
         carryover = []
         if should_carryover:
             carryover = await self.repo.get_carryover_systems()
-        await bot.channel.purge(check=self.is_not_pinned_message)
+        await bot.channel.purge(limit=None, check=self.is_not_pinned_message)
         splits = self.split_valid_systems(valid_systems, (datetime.date.today() - self.start_date).days, carryover)
         first_message = await self.post_list(splits, 'Primary')
         await self.post_list(splits, 'Secondary')
