@@ -25,13 +25,14 @@ class SystemsPostingService:
             carryover = await self.repo.get_carryover_systems()
         await bot.channel.purge(check=self.is_not_pinned_message)
         splits = self.split_valid_systems(valid_systems, (datetime.date.today() - self.start_date).days, carryover)
-        await self.post_list(splits, 'Primary')
+        first_message = await self.post_list(splits, 'Primary')
         await self.post_list(splits, 'Secondary')
         await self.post_list(splits, 'Tertiary')
         if len(valid_systems):
-            await bot.channel.send(f"<@&{FACTION_SCOUT_ROLE_ID}> List Updated")
+            await bot.channel.send(f"<@&{FACTION_SCOUT_ROLE_ID}> List Updated\nLink to top: {first_message.jump_url}")
 
-    async def post_list(self, splits, priority_string):
+    async def post_list(self, splits, priority_string) -> discord.Message:
+        first_message = None
         if len(splits[priority_string]):
             if priority_string!='Primary':
                 await bot.channel.send(f"__**{priority_string} List**__")
@@ -41,7 +42,9 @@ class SystemsPostingService:
         for scout_system in splits[priority_string]:
             message = await bot.channel.send(scout_system.system)
             await message.add_reaction(bot.emoji_bullseye)
-
+            if not first_message:
+                first_message = message
+        return first_message
 
     @staticmethod
     def is_not_pinned_message(message: discord.message.Message) -> bool:
