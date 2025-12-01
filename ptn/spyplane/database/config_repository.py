@@ -1,5 +1,5 @@
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ptn.spyplane.database.base_repository import BaseRepository
 from ptn.spyplane.models.config import Config
@@ -24,13 +24,13 @@ class ConfigRepository(BaseRepository):
     async def get_config(self, name) -> Config:
         async with self.db().execute(get_config, [name]) as cur:
             row = await cur.fetchone()
-        return Config(row[0], row[1], row[2], datetime.utcfromtimestamp(row[3]))
+        return Config(row[0], row[1], row[2], datetime.fromtimestamp(row[3], timezone.utc))
 
     async def dump_config(self) -> list[Config]:
         async with self.db().execute(dump_config) as cur:
             rows = await cur.fetchall()
         return [
-            Config(row[0], row[1], row[2], datetime.utcfromtimestamp(row[3]))
+            Config(row[0], row[1], row[2], datetime.fromtimestamp(row[3], timezone.utc))
             for row in rows
         ]
 

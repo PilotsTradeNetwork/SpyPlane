@@ -13,7 +13,7 @@ class TickService:
         assert self.current_tick
 
     def get_current_tick(self) -> datetime:
-        return datetime.utcfromtimestamp(int(self.current_tick))
+        return datetime.fromtimestamp(int(self.current_tick), timezone.utc)
 
     async def has_ticked(self) -> bool:
         try:

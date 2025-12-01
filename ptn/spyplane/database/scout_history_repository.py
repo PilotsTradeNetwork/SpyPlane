@@ -1,5 +1,5 @@
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ptn.spyplane.constants import log
 from ptn.spyplane.database.base_repository import BaseRepository
@@ -49,7 +49,7 @@ class ScoutHistoryRepository(BaseRepository):
         async with self.db().execute(query, parameters=params) as cur:
             rows = await cur.fetchall()
             return [
-                ScoutHistory(r[0], r[1], r[2], r[3], datetime.utcfromtimestamp(r[4]))
+                ScoutHistory(r[0], r[1], r[2], r[3], datetime.fromtimestamp(r[4], timezone.utc))
                 for r in rows
             ]
 
