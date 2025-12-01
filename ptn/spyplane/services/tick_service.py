@@ -16,8 +16,12 @@ class TickService:
         return datetime.utcfromtimestamp(int(self.current_tick))
 
     async def has_ticked(self) -> bool:
-        new_tick = await self.fetch_current_tick()
-        assert new_tick
+        try:
+            new_tick = await self.fetch_current_tick()
+            assert new_tick
+        except Exception as e:
+            log(f"Error during has_ticked check: {e}")
+            return False
         tick_changed = self.current_tick != new_tick
         if tick_changed:
             log(f"Tick detected: Current {self.current_tick}, New {new_tick}")

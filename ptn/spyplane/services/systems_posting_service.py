@@ -29,63 +29,48 @@ class SystemsPostingService:
         # Purge channel
         await self._purge_channel()
 
-        splits = self.split_systems_by_priority(tracked_systems, carryover)
+        daily_sequence = self._get_daily_sequence()
+        splits = self.split_systems_by_priority(tracked_systems, daily_sequence, carryover)
 
         # Log counts before posting
         log(
             f"Posting systems - Primary: {len(splits['Primary'])}, Secondary: {len(splits['Secondary'])}, Tertiary: {len(splits['Tertiary'])}"
         )
 
-        await self.post_list(splits, "Primary")
+        first_message = await self.post_list(splits, "Primary")
         await self.post_list(splits, "Secondary")
         await self.post_list(splits, "Tertiary")
 
         if len(tracked_systems):
-            await bot.channel.send(f"<@&{FACTION_SCOUT_ROLE_ID}> List Updated")
+            await bot.channel.send(f"<@&{FACTION_SCOUT_ROLE_ID}> List Updated\nLink to top: {first_message.jump_url}")
 
     async def post_list(self, splits, priority_string):
         systems_for_priority = splits[priority_string]
 
-        if len(systems_for_priority):
-            # Apply daily rotation logic based on priority
-            daily_sequence = self._get_daily_sequence()
-
-            if priority_string == "Primary":
-                # Primary: Post all systems (no rotation)
-                systems_to_post = systems_for_priority
-            elif priority_string == "Secondary":
-                # Secondary: Split into 2 groups, rotate every other day
-                every_other_day = list(self.split(systems_for_priority, 2))
-                systems_to_post = (
-                    every_other_day[daily_sequence % 2] if every_other_day else []
-                )
-            elif priority_string == "Tertiary":
-                # Tertiary: Split into 3 groups, rotate every third day
-                every_third_day = list(self.split(systems_for_priority, 3))
-                systems_to_post = (
-                    every_third_day[daily_sequence % 3] if every_third_day else []
-                )
-            else:
-                systems_to_post = systems_for_priority
-
-            # Log the actual count that will be posted after rotation
-            log(
-                f"Posting {len(systems_to_post)} {priority_string} systems (day {daily_sequence})"
-            )
-
-            # Send header for non-Primary priorities
-            if priority_string != "Primary":
-                await bot.channel.send(f"__**{priority_string} List**__")
-
-            # Write to database (only the systems we're actually posting)
-            await self.repo.write_system_to_post(systems_to_post)
-
-            # Post each system
-            for scout_system in systems_to_post:
-                message = await bot.channel.send(scout_system.system)
-                await message.add_reaction(bot.emoji_bullseye)
-        else:
+        if not systems_for_priority:
             log(f"Empty {priority_string} List")
+            return None
+
+        first_message = None
+        # Log the actual count that will be posted after rotation
+        log(
+            f"Posting {len(systems_for_priority)} {priority_string} systems"
+        )
+
+        # Send header for non-Primary priorities
+        if priority_string != "Primary":
+            await bot.channel.send(f"__**{priority_string} List**__")
+
+        # Write to database (only the systems we're actually posting)
+        await self.repo.write_system_to_post(systems_for_priority)
+
+        # Post each system
+        for scout_system in systems_for_priority:
+            message = await bot.channel.send(scout_system.system)
+            await message.add_reaction(bot.emoji_bullseye)
+            if not first_message:
+                first_message = message
+        return first_message
 
     async def _purge_channel(self):
         """Purge the channel of all non-pinned messages"""
@@ -118,31 +103,41 @@ class SystemsPostingService:
         return not message.pinned
 
     def split_systems_by_priority(
-        self, systems: list[ScoutSystem], carryover: list[ScoutSystem]
+        self, systems: list[ScoutSystem], daily_sequence: int, carryover: list[ScoutSystem]
     ) -> dict[str, list[ScoutSystem]]:
-        """Split systems by priority without rotation (rotation happens in post_list)"""
+        """Split systems by priority and apply rotation logic"""
         splits = {
             "Primary": [s for s in systems if s.priority == "Primary"],
             "Secondary": [s for s in systems if s.priority == "Secondary"],
             "Tertiary": [s for s in systems if s.priority == "Tertiary"],
         }
 
+        # Apply rotation logic
+        every_other_day = list(self.split(splits["Secondary"], 2))
+        every_third_day = list(self.split(splits["Tertiary"], 3))
+        secondary_today = (
+            every_other_day[daily_sequence % 2] if every_other_day else []
+        )
+        tertiary_today = (
+            every_third_day[daily_sequence % 3] if every_third_day else []
+        )
+
         # Add carryover systems
         return {
             "Primary": splits["Primary"],
-            "Secondary": splits["Secondary"]
+            "Secondary": secondary_today
             + [
                 s
                 for s in carryover
                 if s.priority == "Secondary"
-                and s.system not in [l.system for l in splits["Secondary"]]
+                and s.system not in [l.system for l in secondary_today]
             ],
-            "Tertiary": splits["Tertiary"]
+            "Tertiary": tertiary_today
             + [
                 s
                 for s in carryover
                 if s.priority == "Tertiary"
-                and s.system not in [l.system for l in splits["Tertiary"]]
+                and s.system not in [l.system for l in tertiary_today]
             ],
         }
 
