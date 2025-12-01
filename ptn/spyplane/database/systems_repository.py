@@ -138,7 +138,9 @@ class SystemsRepository(BaseRepository):
         query = "SELECT system_name, priority, added_by, added_at FROM scout_systems ORDER BY added_at"
         return await self.get_systems(query)
 
-    async def bulk_add_systems(self, systems_data: list[tuple[str, str, str]]) -> tuple[int, int]:
+    async def bulk_add_systems(
+        self, systems_data: list[tuple[str, str, str]]
+    ) -> tuple[int, int]:
         """
         Bulk add systems to tracking
         Args:
@@ -148,7 +150,7 @@ class SystemsRepository(BaseRepository):
         """
         successful = 0
         failed = 0
-        
+
         for system_name, priority, added_by in systems_data:
             try:
                 success = await self.add_system(system_name, priority, added_by)
@@ -159,7 +161,7 @@ class SystemsRepository(BaseRepository):
             except Exception as e:
                 log(f"Error adding system {system_name}: {e}")
                 failed += 1
-                
+
         return successful, failed
 
     async def bulk_remove_systems(self, system_names: list[str]) -> tuple[int, int]:
@@ -172,7 +174,7 @@ class SystemsRepository(BaseRepository):
         """
         successful = 0
         failed = 0
-        
+
         for system_name in system_names:
             try:
                 success = await self.remove_system(system_name)
@@ -183,7 +185,7 @@ class SystemsRepository(BaseRepository):
             except Exception as e:
                 log(f"Error removing system {system_name}: {e}")
                 failed += 1
-                
+
         return successful, failed
 
     async def remove_all_by_priority(self, priority: str) -> int:

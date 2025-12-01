@@ -1,10 +1,13 @@
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 from unittest import IsolatedAsyncioTestCase
 
 from ptn.spyplane.database.scout_history_repository import ScoutHistoryRepository
-from ptn.spyplane.models.scout_history import ScoutHistory
 from ptn.spyplane.models.scout_system import ScoutSystem
 from ptn.spyplane.spy_plane import bot
+
+if TYPE_CHECKING:
+    from ptn.spyplane.models.scout_history import ScoutHistory
 
 
 class ScoutHistoryRepositoryTests(IsolatedAsyncioTestCase):

@@ -1,3 +1,4 @@
+import logging
 import ast
 import os
 import sys
@@ -70,7 +71,6 @@ REPORT_CHANNEL = (
 )
 DB_PATH = "./tests/test_workspace/spyplane.db" if is_test else "./workspace/spyplane.db"
 
-import logging
 
 # Configure logging
 logging.basicConfig(

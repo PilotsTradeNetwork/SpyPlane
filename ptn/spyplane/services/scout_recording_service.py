@@ -6,11 +6,9 @@ from ptn.spyplane.spy_plane import bot
 
 
 class ScoutRecordingService:
-    def __init__(
-        self, systems_repo=SystemsRepository(), history_repo=ScoutHistoryRepository()
-    ):
-        self.systems_repo = systems_repo
-        self.history_repo = history_repo
+    def __init__(self, systems_repo=None, history_repo=None):
+        self.systems_repo = systems_repo or SystemsRepository()
+        self.history_repo = history_repo or ScoutHistoryRepository()
 
     async def record_reaction(self, content: str, username: str, userid: int) -> None:
         try:

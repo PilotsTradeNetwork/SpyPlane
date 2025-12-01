@@ -9,9 +9,9 @@ from ptn.spyplane.database.systems_repository import SystemsRepository
 
 
 class ConfigService:
-    def __init__(self, repo=ConfigRepository(), system_repo=SystemsRepository()):
-        self.repo = repo
-        self.system_repo = system_repo
+    def __init__(self, repo=None, system_repo=None):
+        self.repo = repo or ConfigRepository()
+        self.system_repo = system_repo or SystemsRepository()
 
     async def dump_config_embed(self) -> Embed:
         embed = ConfigService.common_embed_setup(None, "Configuration")
