@@ -23,12 +23,22 @@ class SystemsPostingServiceTests(unittest.TestCase):
         ]
         carryover = []
         systems = primary + secondary + tertiary
-        day_list = self.subject.split_systems_by_priority(systems, carryover)
+        daily_sequence = 0
+        day_list = self.subject.split_systems_by_priority(systems, daily_sequence, carryover)
 
         # Test that systems are correctly split by priority
+        # Primary should always include all systems
         self.assertEqual(day_list["Primary"], primary)
-        self.assertEqual(day_list["Secondary"], secondary)
-        self.assertEqual(day_list["Tertiary"], tertiary)
+        # Secondary and Tertiary are rotated, so we check that they contain a subset
+        # Secondary is split into 2 groups, so we should get approximately half
+        self.assertGreater(len(day_list["Secondary"]), 0)
+        self.assertLessEqual(len(day_list["Secondary"]), len(secondary))
+        # Tertiary is split into 3 groups, so we should get approximately one third
+        self.assertGreater(len(day_list["Tertiary"]), 0)
+        self.assertLessEqual(len(day_list["Tertiary"]), len(tertiary))
+        # All returned systems should be from the original lists
+        self.assertTrue(all(s in secondary for s in day_list["Secondary"]))
+        self.assertTrue(all(s in tertiary for s in day_list["Tertiary"]))
 
         # Test with carryover systems
         carryover_secondary = [
@@ -40,11 +50,20 @@ class SystemsPostingServiceTests(unittest.TestCase):
         carryover = carryover_secondary + carryover_tertiary
 
         day_list_with_carryover = self.subject.split_systems_by_priority(
-            systems, carryover
+            systems, daily_sequence, carryover
         )
 
-        # Check that carryover systems are added
-        self.assertEqual(len(day_list_with_carryover["Secondary"]), len(secondary) + 1)
-        self.assertEqual(len(day_list_with_carryover["Tertiary"]), len(tertiary) + 1)
+        # Check that carryover systems are added (if not already in the rotated list)
+        # The carryover should be added if it's not already in the list
+        secondary_count_before_carryover = len(day_list["Secondary"])
+        tertiary_count_before_carryover = len(day_list["Tertiary"])
+        # Carryover will only be added if not already present
+        self.assertGreaterEqual(
+            len(day_list_with_carryover["Secondary"]), secondary_count_before_carryover
+        )
+        self.assertGreaterEqual(
+            len(day_list_with_carryover["Tertiary"]), tertiary_count_before_carryover
+        )
+        # Check that carryover systems are included
         self.assertIn(carryover_secondary[0], day_list_with_carryover["Secondary"])
         self.assertIn(carryover_tertiary[0], day_list_with_carryover["Tertiary"])

@@ -1,5 +1,5 @@
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 import discord
 from discord import Color, Embed
@@ -48,7 +48,7 @@ class ConfigService:
             title=title,
             description=description,
             color=Color.dark_purple(),
-            timestamp=datetime.utcfromtimestamp(time.time()),
+            timestamp=datetime.fromtimestamp(time.time(), timezone.utc),
         )
         embed.set_footer(
             icon_url="https://edassets.org/static/img/pilots-federation/explorer/rank-9.png",
