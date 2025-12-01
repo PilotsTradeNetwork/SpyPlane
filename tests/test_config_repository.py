@@ -1,9 +1,12 @@
 import datetime
+from typing import TYPE_CHECKING
 from unittest import IsolatedAsyncioTestCase
 
 from ptn.spyplane.database.config_repository import ConfigRepository
-from ptn.spyplane.models.config import Config
 from ptn.spyplane.spy_plane import bot
+
+if TYPE_CHECKING:
+    from ptn.spyplane.models.config import Config
 
 
 class ConfigRepositoryTests(IsolatedAsyncioTestCase):

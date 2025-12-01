@@ -74,57 +74,56 @@ async def faction_config(interaction: Interaction, name: str, value: str):
 async def faction_operations_report(interaction: Interaction):
     """Top Secret: Classified agent activity report. Faction Command Eyes-Only."""
     await interaction.response.defer()
-    
+
     try:
         # Get scout history for embed (top 5 scouts)
         three_months_ago = datetime.now() - timedelta(days=90)
         repo = ScoutHistoryRepository()
         scout_history = await repo.get_history()
-        
+
         # Filter to last 3 months
         recent_scouts = [
-            scout for scout in scout_history 
-            if scout.timestamp >= three_months_ago
+            scout for scout in scout_history if scout.timestamp >= three_months_ago
         ]
-        
+
         # Create embed for top scouts
         if not recent_scouts:
             embed = discord.Embed(
                 title="🔍 Faction Operations Report",
                 color=discord.Color.red(),
-                description="No scout activity recorded in the last 3 months.\nAsset status: **INACTIVE**"
+                description="No scout activity recorded in the last 3 months.\nAsset status: **INACTIVE**",
             )
             await interaction.followup.send(embed=embed)
             return
-        
+
         # Count scouts by username
         scout_counts = {}
         for scout in recent_scouts:
             username = scout.username
             scout_counts[username] = scout_counts.get(username, 0) + 1
-        
+
         # Get top 5 scouts
         top_scouts = sorted(scout_counts.items(), key=lambda x: x[1], reverse=True)[:5]
-        
+
         # Create embed
         embed = discord.Embed(
             title="🔍 Faction Operations Report",
             color=discord.Color.green(),
-            description=f"**Top 5 Scouts (Last 3 Months)**\nTotal Activity: {len(recent_scouts)} reports"
+            description=f"**Top 5 Scouts (Last 3 Months)**\nTotal Activity: {len(recent_scouts)} reports",
         )
-        
+
         # Add top scouts to embed
         for i, (username, count) in enumerate(top_scouts, 1):
             medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else "🏅"
             embed.add_field(
                 name=f"{medal} #{i} {username}",
                 value=f"**{count}** scout reports",
-                inline=False
+                inline=False,
             )
-        
+
         # Add footer with classification
         embed.set_footer(text="[TOP SECRET] Eyes-Only Faction Command")
-        
+
         # Generate CSV using shell script
         exitcode = await run_export_script()
         if exitcode == 0:
@@ -132,7 +131,7 @@ async def faction_operations_report(interaction: Interaction):
             # Send embed and CSV file
             await interaction.followup.send(
                 embed=embed,
-                file=discord.File("./workspace/faction_command_eyesonly.csv")
+                file=discord.File("./workspace/faction_command_eyesonly.csv"),
             )
         else:
             log(f"[INFO] Export failed with exitcode: {exitcode}")
@@ -141,13 +140,13 @@ async def faction_operations_report(interaction: Interaction):
             await interaction.followup.send(
                 "⚠️ CSV export failed, but scout rankings are available above."
             )
-        
+
     except Exception as e:
         log(f"[ERROR] Faction operations report failed: {e}")
         embed = discord.Embed(
             title="🔍 Faction Operations Report",
             color=discord.Color.red(),
-            description="Asset compromised. Report failed. Escalate to flight command."
+            description="Asset compromised. Report failed. Escalate to flight command.",
         )
         await interaction.followup.send(embed=embed)
 
@@ -165,8 +164,8 @@ async def run_export_script():
 
 @bot.tree.command(name="faction_track")
 @app_commands.describe(
-    system_names="Comma-separated list of system names to track (max 10 systems)", 
-    priority="Priority level for tracking"
+    system_names="Comma-separated list of system names to track (max 10 systems)",
+    priority="Priority level for tracking",
 )
 @app_commands.choices(
     priority=[
@@ -183,14 +182,16 @@ async def faction_track(interaction: Interaction, system_names: str, priority: s
 
     try:
         # Parse comma-separated system names
-        system_list = [name.strip() for name in system_names.split(',') if name.strip()]
-        
+        system_list = [name.strip() for name in system_names.split(",") if name.strip()]
+
         if len(system_list) == 0:
             await interaction.followup.send("❌ No valid systems found in the list.")
             return
-            
+
         if len(system_list) > 10:
-            await interaction.followup.send("❌ Maximum 10 systems allowed per command.")
+            await interaction.followup.send(
+                "❌ Maximum 10 systems allowed per command."
+            )
             return
 
         # Validate all systems first
@@ -199,17 +200,22 @@ async def faction_track(interaction: Interaction, system_names: str, priority: s
             is_valid = await repo.is_valid_system(system_name)
             if not is_valid:
                 invalid_systems.append(system_name)
-        
+
         if invalid_systems:
-            await interaction.followup.send(f"❌ Invalid systems found: {', '.join(invalid_systems)}")
+            await interaction.followup.send(
+                f"❌ Invalid systems found: {', '.join(invalid_systems)}"
+            )
             return
 
         # Prepare systems data (all with same priority)
-        systems_data = [(system_name, priority, interaction.user.name) for system_name in system_list]
+        systems_data = [
+            (system_name, priority, interaction.user.name)
+            for system_name in system_list
+        ]
 
         # Bulk add systems
         successful, failed = await repo.bulk_add_systems(systems_data)
-        
+
         if successful > 0:
             message = f"✅ Added {successful} systems to tracking with **{priority}** priority"
             if failed > 0:
@@ -217,7 +223,7 @@ async def faction_track(interaction: Interaction, system_names: str, priority: s
             await interaction.followup.send(message)
         else:
             await interaction.followup.send("❌ Failed to add any systems.")
-            
+
     except Exception as e:
         log(f"Error processing system names: {e}")
         await interaction.followup.send("❌ Error processing system names.")
@@ -235,19 +241,21 @@ async def faction_remove(interaction: Interaction, system_names: str):
 
     try:
         # Parse comma-separated system names
-        system_list = [name.strip() for name in system_names.split(',') if name.strip()]
-        
+        system_list = [name.strip() for name in system_names.split(",") if name.strip()]
+
         if len(system_list) == 0:
             await interaction.followup.send("❌ No valid systems found in the list.")
             return
-            
+
         if len(system_list) > 10:
-            await interaction.followup.send("❌ Maximum 10 systems allowed per command.")
+            await interaction.followup.send(
+                "❌ Maximum 10 systems allowed per command."
+            )
             return
 
         # Bulk remove systems
         successful, failed = await repo.bulk_remove_systems(system_list)
-        
+
         if successful > 0:
             message = f"✅ Removed {successful} systems from tracking"
             if failed > 0:
@@ -255,7 +263,7 @@ async def faction_remove(interaction: Interaction, system_names: str):
             await interaction.followup.send(message)
         else:
             await interaction.followup.send("❌ No systems were removed.")
-            
+
     except Exception as e:
         log(f"Error processing system names: {e}")
         await interaction.followup.send("❌ Error processing system names.")
@@ -275,11 +283,11 @@ async def faction_removeall(interaction: Interaction, priority: str):
     await interaction.response.defer()
 
     repo = SystemsRepository()
-    
+
     try:
         # Remove all systems of the specified priority
         deleted_count = await repo.remove_all_by_priority(priority)
-        
+
         if deleted_count > 0:
             await interaction.followup.send(
                 f"✅ Removed all **{priority}** systems from tracking ({deleted_count} systems deleted)"
@@ -288,7 +296,7 @@ async def faction_removeall(interaction: Interaction, priority: str):
             await interaction.followup.send(
                 f"ℹ️ No **{priority}** systems found in tracking"
             )
-            
+
     except Exception as e:
         log(f"Error removing all {priority} systems: {e}")
         await interaction.followup.send(
@@ -309,8 +317,6 @@ async def faction_list(interaction: Interaction):
         return
 
     # Create CSV content
-    import csv
-    import io
     from datetime import datetime
 
     output = io.StringIO()

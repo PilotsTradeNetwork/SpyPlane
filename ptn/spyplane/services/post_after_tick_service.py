@@ -12,13 +12,13 @@ from ptn.spyplane.spy_plane import bot
 class PostAfterTickService:
     def __init__(
         self,
-        systems=SystemsPostingService(),
-        repo=ConfigRepository(),
-        ticks=TickService(),
+        systems=None,
+        repo=None,
+        ticks=None,
     ):
-        self.systems: SystemsPostingService = systems
-        self.repo: ConfigRepository = repo
-        self.tick_service: TickService = ticks
+        self.systems: SystemsPostingService = systems or SystemsPostingService()
+        self.repo: ConfigRepository = repo or ConfigRepository()
+        self.tick_service: TickService = ticks or TickService()
 
     async def post_systems(self):
         log("Posting systems now")

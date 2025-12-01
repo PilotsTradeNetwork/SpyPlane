@@ -20,9 +20,9 @@ delete from scout_history
 
 
 class ScoutHistoryRepository(BaseRepository):
-    async def record_scout(
-        self, system: ScoutSystem, username, userid, ts=datetime.now()
-    ):
+    async def record_scout(self, system: ScoutSystem, username, userid, ts=None):
+        if ts is None:
+            ts = datetime.now()
         await self.db().execute(
             insert_scout_history,
             (system.system, username, userid, time.mktime(ts.timetuple())),

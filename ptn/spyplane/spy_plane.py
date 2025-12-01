@@ -1,12 +1,15 @@
 import sys
-from asyncio import Lock
-from threading import Thread
+from typing import TYPE_CHECKING
 
 import aiosqlite
 from aiosqlite import Connection
 from discord import Intents, Object, Emoji
-from discord.abc import GuildChannel, PrivateChannel
 from discord.ext.commands import Bot, when_mentioned_or
+
+if TYPE_CHECKING:
+    from asyncio import Lock
+    from threading import Thread
+    from discord.abc import GuildChannel, PrivateChannel
 
 from ptn.spyplane.constants import GUILD_ID, DB_PATH, log
 
@@ -20,9 +23,7 @@ class SpyPlane(Bot):
         self.lock: Lock | None = None
         self.emoji_bullseye: Emoji | None = None
         self.channel: GuildChannel | Thread | PrivateChannel | None = None
-        self.report_channel: GuildChannel | Thread | PrivateChannel | None = (
-            None
-        )
+        self.report_channel: GuildChannel | Thread | PrivateChannel | None = None
 
     async def setup_hook(self):
         discord_server_object = Object(id=GUILD_ID)
