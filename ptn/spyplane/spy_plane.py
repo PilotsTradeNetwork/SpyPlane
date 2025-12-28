@@ -19,8 +19,8 @@ from ptn.spyplane.constants import (
 )
 from discord.ext.prometheus import PrometheusCog
 
+from ptn.spyplane.bot_registry import register_bot
 from ptn.spyplane.constants import TOKEN
-from ptn.spyplane.eddn_listener import eddn_listener_thread
 
 
 class SpyPlane(Bot):
@@ -49,6 +49,8 @@ class SpyPlane(Bot):
 
     async def close(self):
         # Stop EDDN listener thread
+        from ptn.spyplane.eddn_listener import get_eddn_listener_thread
+        eddn_listener_thread = get_eddn_listener_thread()
         if eddn_listener_thread.is_alive():
             log("Stopping EDDN listener thread")
             eddn_listener_thread.stop()
@@ -64,6 +66,7 @@ class SpyPlane(Bot):
 
 
 bot = SpyPlane()
+register_bot(bot)  # Register bot after creation
 
 
 def run():

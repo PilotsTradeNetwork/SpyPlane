@@ -1,6 +1,8 @@
 from discord import Interaction
 
-from ptn.spyplane.spy_plane import bot
+from ptn.spyplane.bot_registry import get_bot
+
+bot = get_bot()
 
 
 @bot.tree.command()

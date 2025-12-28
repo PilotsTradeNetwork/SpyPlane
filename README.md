@@ -28,16 +28,6 @@ Scouting bot
 7. **Seed with test data**: `cd db/data && python seed_database.py`
 8. Startup the bot with `uv run spy` or `uv run python -m spyplane.spy_plane`
 
-## System Tracking
-
-The bot now tracks systems directly in the SQLite database. Use the following Discord commands:
-
-- `/faction_track <system_name> <priority>` - Add a system to track (Primary, Secondary, or Tertiary)
-- `/faction_remove <system_name>` - Remove a system from tracking  
-- `/faction_list` - List all currently tracked systems
-
-**Note**: Systems are validated against the `systems` table when added via `/faction_track`. Only valid systems can be tracked.
-
 ## Running tests
 
 From the repo root

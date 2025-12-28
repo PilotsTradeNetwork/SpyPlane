@@ -1,9 +1,11 @@
 from discord import Interaction, app_commands
 
 from ptn.spyplane._metadata import __version__
+from ptn.spyplane.bot_registry import get_bot
 from ptn.spyplane.constants import log
 from ptn.spyplane.services.config_service import ConfigService
-from ptn.spyplane.spy_plane import bot
+
+bot = get_bot()
 
 
 @bot.tree.command(name="faction_config")

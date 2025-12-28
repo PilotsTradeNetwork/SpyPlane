@@ -2,11 +2,11 @@ import datetime
 
 import discord.message
 
+from ptn.spyplane.bot_registry import get_bot
 from ptn.spyplane.constants import FACTION_SCOUT_ROLE_ID, log
 from ptn.spyplane.database.config_repository import ConfigRepository
 from ptn.spyplane.database.systems_repository import SystemsRepository
 from ptn.spyplane.models.scout_system import ScoutSystem
-from ptn.spyplane.spy_plane import bot
 
 
 class SystemsPostingService:
@@ -18,6 +18,7 @@ class SystemsPostingService:
         )  # start day randomly chosen for the daily sequence
 
     async def publish_systems_to_scout(self):
+        bot = get_bot()
         tracked_systems = await self.repo.get_all_tracked_systems()
         should_carryover = (
             await self.config_repo.get_config("carryover")
@@ -49,6 +50,7 @@ class SystemsPostingService:
             )
 
     async def post_list(self, splits, priority_string):
+        bot = get_bot()
         systems_for_priority = splits[priority_string]
 
         if not systems_for_priority:
@@ -79,6 +81,7 @@ class SystemsPostingService:
 
     async def _purge_channel(self):
         """Purge the channel of all non-pinned messages"""
+        bot = get_bot()
         try:
             if bot.channel is None:
                 log("[ERROR] bot.channel is None - cannot purge")

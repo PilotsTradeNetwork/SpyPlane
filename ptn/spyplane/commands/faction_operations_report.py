@@ -5,9 +5,11 @@ from datetime import datetime, timedelta
 import discord
 from discord import Interaction
 
+from ptn.spyplane.bot_registry import get_bot
 from ptn.spyplane.constants import log
 from ptn.spyplane.database.scout_history_repository import ScoutHistoryRepository
-from ptn.spyplane.spy_plane import bot
+
+bot = get_bot()
 
 
 async def run_export_script():
