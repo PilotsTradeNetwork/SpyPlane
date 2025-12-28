@@ -1,12 +1,14 @@
 import asyncio
+import random
 
-from discord import RawReactionActionEvent, Message
+from discord import Embed, RawReactionActionEvent, Message
 
 from ptn.spyplane._metadata import __version__
 from ptn.spyplane.constants import (
-    CONTROL_CHANNEL,
-    REPORT_CHANNEL,
+    BOT_DEV_CHANNEL,
+    CHANNEL_MONITORING,
     EMOJI_TARGET,
+    hello_gifs,
     log,
     log_exception,
 )
@@ -39,8 +41,20 @@ bot = get_bot()
 async def on_ready():
     try:
         log(f"{bot.user.name} has connected to Discord server. Version: {__version__}")
-        bot.channel = bot.get_channel(CONTROL_CHANNEL)
-        bot.report_channel = bot.get_channel(REPORT_CHANNEL)
+        
+        # Send hello gif to dev channel
+        dev_channel = bot.get_channel(BOT_DEV_CHANNEL)
+        if dev_channel:
+            embed = Embed(
+                title="SPY PLANE ONLINE",
+                description=f"<@{bot.user.id}> connected, version **{__version__}**.",
+                color=0x00FF00  # Green color
+            )
+            embed.set_image(url=random.choice(hello_gifs))
+            await dev_channel.send(embed=embed)
+        
+        bot.channel = dev_channel
+        bot.report_channel = bot.get_channel(CHANNEL_MONITORING)
         bot.lock = asyncio.Lock()
         emoji = bot.get_emoji(EMOJI_TARGET)
         bot.emoji_bullseye = emoji or "✅"
@@ -82,9 +96,48 @@ async def on_error(event, *args, **kwargs):
 
 
 @bot.event
+async def on_message(message: Message):
+    """Greet if mentioned and ping is written"""
+    TXT_COMMANDS = ["ping"]
+    try:
+        msg_split = message.content.split()
+
+        # Don't send the gif if any of these conditions is met
+        if (
+            bot.user.mention not in message.content
+            or message.reference
+            or message.is_system()
+            or message.author is bot.user
+        ):
+            # Process commands normally
+            await bot.process_commands(message)
+            return
+
+        # Don't send the gif if a command is detected (even by someone who has no access)
+        if (
+            len(msg_split) >= 2
+            and msg_split[1].lower() in TXT_COMMANDS
+        ):
+            # Process commands normally
+            await bot.process_commands(message)
+            return
+
+        # Now that we've ruled out all the cases where we don't want to send the gif, send the gif
+        log(f"Bot mentioned in {message.channel.name}, greeting")
+        gif = random.choice(hello_gifs)
+        await message.channel.send(gif, reference=message)
+        # Still process commands in case there are other commands
+        await bot.process_commands(message)
+    except Exception as e:
+        log_exception("on_message", e)
+        # Still process commands even if there's an error
+        await bot.process_commands(message)
+
+
+@bot.event
 async def on_raw_reaction_add(payload: RawReactionActionEvent):
     try:
-        if payload.channel_id != CONTROL_CHANNEL:
+        if payload.channel_id != BOT_DEV_CHANNEL:
             # log(f"Not the right channel {payload.channel_id}")
             return
         if payload.user_id == bot.user.id:
