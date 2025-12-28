@@ -3,15 +3,16 @@ from datetime import datetime
 from ptn.spyplane.constants import log
 from ptn.spyplane.database.base_repository import BaseRepository
 from ptn.spyplane.models.scout_system import ScoutSystem
+from ptn.spyplane.services.scout_systems_cache import ScoutSystemsCache
 
 insert_scout_system = """
 insert into scout_systems (system_name, priority, added_by, added_at) values (?,?,?,?);
 """
 insert_post_system = """
-insert or ignore into scout_systems_posted (system_name, priority) values (?,?);
+insert or ignore into scout_systems_posted (system_name, priority, message_id) values (?,?,?);
 """
 update_post_system = """
-update scout_systems_posted set priority=? where system_name=?;
+update scout_systems_posted set priority=?, message_id=? where system_name=?;
 """
 select_scout_system = """
 select *
@@ -43,6 +44,9 @@ select s.system_name, s.priority
 from scout_systems_posted s
 """
 
+# Cache instance
+_scout_cache = ScoutSystemsCache()
+
 
 class SystemsRepository(BaseRepository):
     async def is_valid_system(self, system: str) -> bool:
@@ -60,6 +64,8 @@ class SystemsRepository(BaseRepository):
 
     async def purge_scout_systems(self) -> None:
         await self.db().execute(purge_scout)
+        # Clear cache when purging
+        _scout_cache.clear()
 
     async def purge_posted_systems(self) -> None:
         await self.begin()
@@ -85,13 +91,34 @@ class SystemsRepository(BaseRepository):
         else:
             return []
 
-    async def write_system_to_post(self, systems_to_scout: list[ScoutSystem]):
+    async def write_system_to_post(
+        self, systems_to_scout: list[ScoutSystem], message_ids: dict[str, int] | None = None
+    ):
+        """
+        Write systems to scout_systems_posted table with optional message IDs
+        
+        Args:
+            systems_to_scout: List of ScoutSystem objects to write
+            message_ids: Optional dict mapping system_name to message_id
+        """
         await self.begin()
+        # Prepare insert tuples with message_id (None if not provided)
         array_of_tuples = [
-            (system.system, system.priority) for system in systems_to_scout
+            (
+                system.system,
+                system.priority,
+                message_ids.get(system.system) if message_ids else None,
+            )
+            for system in systems_to_scout
         ]
+        # Prepare update tuples with message_id
         array_of_tuples_update = [
-            (system.priority, system.system) for system in systems_to_scout
+            (
+                system.priority,
+                message_ids.get(system.system) if message_ids else None,
+                system.system,
+            )
+            for system in systems_to_scout
         ]
         await self.db().executemany(insert_post_system, array_of_tuples)
         await self.db().executemany(update_post_system, array_of_tuples_update)
@@ -107,15 +134,23 @@ class SystemsRepository(BaseRepository):
         ]
         await self.db().executemany(insert_scout_system, array_of_tuples)
         await self.commit()
+        # Update cache
+        _scout_cache.load(systems_to_write)
 
     async def add_system(self, system_name: str, priority: str, added_by: str) -> bool:
         """Add a system to track. Returns True if added, False if already exists."""
         try:
+            added_at = int(datetime.now().timestamp())
             await self.db().execute(
                 insert_scout_system,
-                [system_name, priority, added_by, int(datetime.now().timestamp())],
+                [system_name, priority, added_by, added_at],
             )
             await self.commit()
+
+            # Update cache
+            system = ScoutSystem(system_name, priority, added_by, added_at)
+            _scout_cache.add(system)
+
             return True
         except Exception as e:
             log(f"Error adding system {system_name}: {e}")
@@ -128,15 +163,36 @@ class SystemsRepository(BaseRepository):
                 "DELETE FROM scout_systems WHERE system_name = ?", [system_name]
             )
             await self.commit()
-            return cursor.rowcount > 0
+
+            if cursor.rowcount > 0:
+                # Update cache
+                _scout_cache.remove(system_name)
+                return True
+            return False
         except Exception as e:
             log(f"Error removing system {system_name}: {e}")
             return False
 
-    async def get_all_tracked_systems(self) -> list[ScoutSystem]:
-        """Get all tracked systems regardless of validity."""
+    async def get_all_tracked_systems(self, force_reload: bool = False) -> list[ScoutSystem]:
+        """
+        Get all tracked systems from cache if available, otherwise from DB
+        Args:
+            force_reload: If True, reload from database even if cache exists
+        """
+        if not force_reload and _scout_cache.count() > 0:
+            return _scout_cache.get_all()
+
         query = "SELECT system_name, priority, added_by, added_at FROM scout_systems ORDER BY added_at"
-        return await self.get_systems(query)
+        systems = await self.get_systems(query)
+        _scout_cache.load(systems)  # Cache the results
+        return systems
+
+    async def reload_cache(self) -> None:
+        """Reload the cache from the database"""
+        query = "SELECT system_name, priority, added_by, added_at FROM scout_systems ORDER BY added_at"
+        systems = await self.get_systems(query)
+        _scout_cache.load(systems)
+        log(f"Reloaded {len(systems)} scout systems into cache")
 
     async def bulk_add_systems(
         self, systems_data: list[tuple[str, str, str]]
@@ -200,6 +256,10 @@ class SystemsRepository(BaseRepository):
         await self.begin()
         cursor = await self.db().execute(query, [priority])
         await self.commit()
+
+        # Update cache
+        _scout_cache.remove_by_priority(priority)
+
         return cursor.rowcount
 
     @staticmethod

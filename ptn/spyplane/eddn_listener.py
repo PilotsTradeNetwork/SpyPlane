@@ -9,7 +9,7 @@ from typing import Optional
 import simplejson
 import zmq
 
-from ptn.spyplane.constants import log, log_exception
+from ptn.spyplane.constants import EDDN_URL, log, log_exception
 from ptn.spyplane.helpers.journal_helper import JournalHelper
 
 
@@ -19,7 +19,7 @@ class EddnListenerThread(threading.Thread):
     def __init__(self, dump_file: Optional[Path] = None):
         threading.Thread.__init__(self)
         self.name = "EDDN Listener"
-        self.eddn_url = "tcp://eddn.edcd.io:9500"
+        self.eddn_url = EDDN_URL
         self.context = zmq.Context()
         self.subscriber = self.context.socket(zmq.SUB)
         self.subscriber.setsockopt(zmq.SUBSCRIBE, b"")

@@ -71,6 +71,8 @@ REPORT_CHANNEL = (
 )
 DB_PATH = "./tests/test_workspace/spyplane.db" if is_test else "./workspace/spyplane.db"
 
+# Change to proxy URL when PTN proxy is ready
+EDDN_URL = os.getenv("EDDN_URL", "tcp://eddn.edcd.io:9500")
 
 # Configure logging
 logging.basicConfig(
