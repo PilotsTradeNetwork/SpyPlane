@@ -63,15 +63,18 @@ class SystemsPostingService:
         if priority_string != "Primary":
             await bot.channel.send(f"__**{priority_string} List**__")
 
-        # Write to database (only the systems we're actually posting)
-        await self.repo.write_system_to_post(systems_for_priority)
-
-        # Post each system
+        # Post each system and collect message IDs
+        message_ids = {}
         for scout_system in systems_for_priority:
             message = await bot.channel.send(scout_system.system)
             await message.add_reaction(bot.emoji_bullseye)
+            message_ids[scout_system.system] = message.id
             if not first_message:
                 first_message = message
+
+        # Write to database with message IDs (only the systems we're actually posting)
+        await self.repo.write_system_to_post(systems_for_priority, message_ids)
+
         return first_message
 
     async def _purge_channel(self):

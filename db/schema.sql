@@ -37,7 +37,8 @@ CREATE TABLE IF NOT EXISTS configuration
 CREATE TABLE IF NOT EXISTS scout_systems_posted
 (
     "system_name" TEXT PRIMARY KEY,
-    "priority"    TEXT NOT NULL
+    "priority"    TEXT NOT NULL,
+    "message_id"  INTEGER
 );
 
 -- Consolidated inserts for the configuration table

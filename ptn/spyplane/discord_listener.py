@@ -10,6 +10,7 @@ from ptn.spyplane.constants import (
     log,
     log_exception,
 )
+from ptn.spyplane.database.systems_repository import SystemsRepository
 from ptn.spyplane.services.post_after_tick_service import PostAfterTickService
 from ptn.spyplane.services.scout_recording_service import ScoutRecordingService
 from ptn.spyplane.spy_plane import bot
@@ -40,6 +41,12 @@ async def on_ready():
         bot.lock = asyncio.Lock()
         emoji = bot.get_emoji(EMOJI_TARGET)
         bot.emoji_bullseye = emoji or "✅"
+
+        # Load scout systems cache on startup
+        repo = SystemsRepository()
+        systems = await repo.get_all_tracked_systems()
+        log(f"Loaded {len(systems)} scout systems into cache")
+
         if not post_service.tick_check_and_schedule.is_running():
             post_service.tick_check_and_schedule.start()
 
