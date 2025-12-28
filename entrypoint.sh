@@ -13,4 +13,4 @@ else
   sqlite3 "$DB" < ./db/data/import.sql
 fi
 
-python -m spyplane.main
+python -m spyplane.spy_plane
