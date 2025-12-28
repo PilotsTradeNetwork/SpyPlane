@@ -10,6 +10,7 @@ import simplejson
 import zmq
 
 from ptn.spyplane.constants import log, log_exception
+from ptn.spyplane.helpers.journal_helper import JournalHelper
 
 
 class EddnListenerThread(threading.Thread):
@@ -26,6 +27,7 @@ class EddnListenerThread(threading.Thread):
         self.continue_listening = True
         self.dump_file_path = dump_file or Path("./workspace/eddn_events.jsonl")
         self.dump_file: Optional[object] = None
+        self.journal_helper = JournalHelper()
 
     def run(self):
         """Main listener loop"""
@@ -52,9 +54,10 @@ class EddnListenerThread(threading.Thread):
                     message = zlib.decompress(message)
                     json_data = simplejson.loads(message)
 
-                    # Dump to file
-                    self.dump_file.write(simplejson.dumps(json_data) + "\n")
-                    self.dump_file.flush()
+                    # Filter events - only dump FSDJump, Location, and CarrierJump events
+                    if self.journal_helper.is_target_event(json_data):
+                        self.dump_file.write(simplejson.dumps(json_data) + "\n")
+                        self.dump_file.flush()
 
             except zmq.ZMQError as e:
                 log_exception("EDDN listener ZMQ error", e)
