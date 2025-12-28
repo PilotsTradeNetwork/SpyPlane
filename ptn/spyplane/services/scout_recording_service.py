@@ -1,8 +1,9 @@
 from datetime import datetime
+
+from ptn.spyplane.bot_registry import get_bot
 from ptn.spyplane.constants import log
 from ptn.spyplane.database.scout_history_repository import ScoutHistoryRepository
 from ptn.spyplane.database.systems_repository import SystemsRepository
-from ptn.spyplane.spy_plane import bot
 
 
 class ScoutRecordingService:
@@ -12,6 +13,7 @@ class ScoutRecordingService:
 
     async def record_reaction(self, content: str, username: str, userid: int) -> None:
         try:
+            bot = get_bot()
             log(f"Content: {content}")
             system = await self.systems_repo.get_system(content)
             async with bot.lock:

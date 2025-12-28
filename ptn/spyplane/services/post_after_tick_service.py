@@ -2,11 +2,11 @@ import asyncio
 
 from discord.ext import tasks
 
+from ptn.spyplane.bot_registry import get_bot
 from ptn.spyplane.constants import log, log_exception
 from ptn.spyplane.database.config_repository import ConfigRepository
 from ptn.spyplane.services.systems_posting_service import SystemsPostingService
 from ptn.spyplane.services.tick_service import TickService
-from ptn.spyplane.spy_plane import bot
 
 
 class PostAfterTickService:
@@ -32,6 +32,7 @@ class PostAfterTickService:
             message = f"Tick detected. Spy Plane will take off in ~ {hours.value} hours"
             log(message)
             if pre_launch_message:
+                bot = get_bot()
                 await bot.channel.send(message)
             seconds = int(hours.value) * 3600
             log(f"Waiting for {seconds} seconds")

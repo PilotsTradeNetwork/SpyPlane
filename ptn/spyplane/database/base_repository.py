@@ -2,15 +2,17 @@ from sqlite3 import OperationalError
 
 from aiosqlite import Connection
 
-from ptn.spyplane.spy_plane import bot
-
 
 class BaseRepository:
     def db(self) -> Connection:
+        from ptn.spyplane.bot_registry import get_bot
+        bot = get_bot()
         return bot.db
 
     @staticmethod
     async def begin():
+        from ptn.spyplane.bot_registry import get_bot
+        bot = get_bot()
         try:
             await bot.db.execute("BEGIN")
         except OperationalError as e:
@@ -20,8 +22,12 @@ class BaseRepository:
 
     @staticmethod
     async def rollback():
+        from ptn.spyplane.bot_registry import get_bot
+        bot = get_bot()
         await bot.db.execute("ROLLBACK")
 
     @staticmethod
     async def commit():
+        from ptn.spyplane.bot_registry import get_bot
+        bot = get_bot()
         await bot.db.execute("COMMIT")

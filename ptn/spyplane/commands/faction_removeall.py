@@ -1,9 +1,11 @@
 from discord import Interaction, app_commands
 from discord.app_commands import Choice
 
+from ptn.spyplane.bot_registry import get_bot
 from ptn.spyplane.constants import log
 from ptn.spyplane.database.systems_repository import SystemsRepository
-from ptn.spyplane.spy_plane import bot
+
+bot = get_bot()
 
 
 @bot.tree.command(name="faction_removeall")

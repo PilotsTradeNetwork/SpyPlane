@@ -10,11 +10,11 @@ from ptn.spyplane.constants import (
     log,
     log_exception,
 )
+from ptn.spyplane.bot_registry import get_bot
 from ptn.spyplane.database.systems_repository import SystemsRepository
+from ptn.spyplane.eddn_listener import get_eddn_listener_thread
 from ptn.spyplane.services.post_after_tick_service import PostAfterTickService
 from ptn.spyplane.services.scout_recording_service import ScoutRecordingService
-from ptn.spyplane.spy_plane import bot
-from ptn.spyplane.eddn_listener import eddn_listener_thread
 
 
 class DiscordListener:
@@ -30,6 +30,9 @@ class DiscordListener:
 # Service instances
 post_service = PostAfterTickService()
 record_service = ScoutRecordingService()
+
+# Get bot instance - this is safe because DiscordListener is imported after bot is registered
+bot = get_bot()
 
 
 @bot.event
@@ -51,6 +54,7 @@ async def on_ready():
             post_service.tick_check_and_schedule.start()
 
         # Start EDDN listener thread if not already running
+        eddn_listener_thread = get_eddn_listener_thread()
         if not eddn_listener_thread.is_alive():
             eddn_listener_thread.start()
             log("EDDN listener thread started")

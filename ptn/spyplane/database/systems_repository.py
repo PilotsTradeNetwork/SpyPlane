@@ -44,6 +44,12 @@ select s.system_name, s.priority
 from scout_systems_posted s
 """
 
+get_message_id_query = """
+select message_id
+from scout_systems_posted
+where system_name = ?
+"""
+
 # Cache instance
 _scout_cache = ScoutSystemsCache()
 
@@ -56,6 +62,12 @@ class SystemsRepository(BaseRepository):
 
     async def get_carryover_systems(self) -> list[ScoutSystem]:
         return await self.get_systems(get_post_systems)
+
+    async def get_message_id(self, system_name: str) -> int | None:
+        """Get message_id for a system from scout_systems_posted table"""
+        async with self.db().execute(get_message_id_query, [system_name]) as cur:
+            row = await cur.fetchone()
+            return row[0] if row and row[0] else None
 
     async def get_system(self, system_name) -> ScoutSystem:
         async with self.db().execute(select_scout_system, [system_name]) as cur:
