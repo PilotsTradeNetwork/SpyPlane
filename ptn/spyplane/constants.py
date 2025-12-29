@@ -95,13 +95,14 @@ def log_exception(context: str, e: Exception):
 
 # random gifs and images
 hello_gifs = [
-    'https://media.tenor.com/DSG9ZID25nsAAAAC/hello-there-general-kenobi.gif',  # obi wan
-    'https://media.tenor.com/uNQvTg9Tk_QAAAAC/hey-tom-hanks.gif',  # tom hanks
-    'https://media.tenor.com/-z2KfO5zAckAAAAC/hello-there-baby-yoda.gif',  # baby yoda
-    'https://media.tenor.com/iZPmuJ0KON8AAAAd/hello-there.gif',  # toddler
-    'https://media.tenor.com/KKvpO702avgAAAAC/hey-hay.gif',  # rollerskates
-    'https://media.tenor.com/pE2UP8CBBuwAAAAC/jim-carrey-funny.gif',  # jim carrey
-    'https://media.tenor.com/-UiIDx_KNUUAAAAd/hi-friends-baby-goat.gif'  # goat
+    'https://media.tenor.com/Bym53MFSVSkAAAAd/hey-hey-you-guys.gif',  # hey guys
+    'https://media.tenor.com/PXiv8TqI28sAAAAC/tf2-team-fortress-2.gif',  # tf2 team fortress 2
+    'https://media.tenor.com/2wftvmdVxyMAAAAC/hey-whats-up.gif',
+    'https://media.tenor.com/qXf69taYAMwAAAAC/hi-mr-bean.gif',
+    'https://media.tenor.com/8ga0KY2xMhAAAAAC/hafnium.gif',
+    'https://media.tenor.com/xtFDWXk46GIAAAAd/tf2-spy.gif',  # tf2 spy
+    'https://media.tenor.com/UYvghSt8FjMAAAAC/bond-spectre.gif',  # bond spectre
+    'https://media.tenor.com/NdOG-1VFaiIAAAAC/kingsman-tux.gif',  # kingsman tux
 ]
 
 error_gifs = [
@@ -109,4 +110,6 @@ error_gifs = [
     "https://media.tenor.com/M1rOzWS3NsQAAAAC/nothingtosee-disperse.gif",  # naked gun
     "https://media.tenor.com/oSASxe-6GesAAAAC/spongebob-patrick.gif",  # spongebob
     "https://media.tenor.com/u-1jz7ttHhEAAAAC/angry-panda-rage.gif",  # panda smash
+    "https://media.tenor.com/kgsVoZcNACsAAAAC/not-my-problem-dont-care-didnt-ask.gif",
+    "https://media.tenor.com/jJl0gYeP-8QAAAAd/johnny-english-rowan-atkinson.gif"
 ]
