@@ -1,13 +1,16 @@
 import asyncio
 import random
 
-from discord import Embed, RawReactionActionEvent, Message
+from discord import Embed, RawReactionActionEvent, Message, Interaction, app_commands
+from discord.app_commands import AppCommandError
 
 from ptn.spyplane._metadata import __version__
 from ptn.spyplane.constants import (
     BOT_DEV_CHANNEL,
+    CHANNEL_BOTSPAM,
     CHANNEL_MONITORING,
     EMOJI_TARGET,
+    error_gifs,
     hello_gifs,
     log,
     log_exception,
@@ -42,17 +45,19 @@ async def on_ready():
     try:
         log(f"{bot.user.name} has connected to Discord server. Version: {__version__}")
         
-        # Send hello gif to dev channel
-        dev_channel = bot.get_channel(BOT_DEV_CHANNEL)
-        if dev_channel:
+        # Send hello gif to botspam channel
+        botspam_channel = bot.get_channel(CHANNEL_BOTSPAM)
+        if botspam_channel:
             embed = Embed(
                 title="SPY PLANE ONLINE",
                 description=f"<@{bot.user.id}> connected, version **{__version__}**.",
                 color=0x00FF00  # Green color
             )
             embed.set_image(url=random.choice(hello_gifs))
-            await dev_channel.send(embed=embed)
+            await botspam_channel.send(embed=embed)
         
+        # Set bot.channel to dev channel for reaction handler
+        dev_channel = bot.get_channel(BOT_DEV_CHANNEL)
         bot.channel = dev_channel
         bot.report_channel = bot.get_channel(CHANNEL_MONITORING)
         bot.lock = asyncio.Lock()
@@ -160,4 +165,70 @@ async def on_raw_reaction_add(payload: RawReactionActionEvent):
             await message.delete()
     except Exception as e:
         log_exception("on_raw_reaction_add", e)
+
+
+@bot.tree.error
+async def on_app_command_error(interaction: Interaction, error: AppCommandError):
+    """Global error handler for app commands (slash commands)"""
+    gif = random.choice(error_gifs)
+    
+    try:
+        log(f"Error from {interaction.command.name if interaction.command else 'unknown'} in {interaction.channel.name if interaction.channel else 'unknown'} called by {interaction.user.display_name}: {error}")
+        
+        if isinstance(error, app_commands.MissingPermissions):
+            embed = Embed(
+                description="**Permission denied**: You don't have permission to use this command.",
+                color=0xFF0000  # Red color
+            )
+            try:
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+            except:
+                await interaction.followup.send(embed=embed, ephemeral=True)
+        
+        elif isinstance(error, app_commands.CheckFailure):
+            embed = Embed(
+                description="**Permission denied**: You don't have permission to use this command.",
+                color=0xFF0000  # Red color
+            )
+            try:
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+            except:
+                await interaction.followup.send(embed=embed, ephemeral=True)
+        
+        elif isinstance(error, app_commands.CommandOnCooldown):
+            embed = Embed(
+                description=f"**Command on cooldown**: Please try again in {error.retry_after:.2f} seconds.",
+                color=0xFF0000  # Red color
+            )
+            try:
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+            except:
+                await interaction.followup.send(embed=embed, ephemeral=True)
+        
+        else:
+            # Generic error - send gif and error message
+            try:
+                await interaction.response.send_message(gif, ephemeral=True)
+            except:
+                await interaction.followup.send(gif, ephemeral=True)
+            
+            embed = Embed(
+                description=f"Sorry, that didn't work: {error}",
+                color=0xFF0000  # Red color
+            )
+            try:
+                await interaction.followup.send(embed=embed, ephemeral=True)
+            except:
+                # If followup also fails, try sending to channel
+                if interaction.channel:
+                    await interaction.channel.send(embed=embed)
+    
+    except Exception as e:
+        log_exception("on_app_command_error", e)
+        # Last resort - try to send something
+        try:
+            if not interaction.response.is_done():
+                await interaction.response.send_message(gif, ephemeral=True)
+        except:
+            pass
 
