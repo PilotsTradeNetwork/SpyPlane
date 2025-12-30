@@ -150,7 +150,7 @@ class EddnListenerThread(threading.Thread):
     async def _handle_faction_states(self, json_data: dict) -> None:
         """Handle faction state extraction and storage for EDDN event"""
         try:
-            await self.faction_state_service.upsert_faction_states_from_event(json_data)
+            await self.faction_state_service.replace_faction_states_from_event(json_data)
         except Exception as e:
             log_exception("Error handling faction states from EDDN event", e)
 

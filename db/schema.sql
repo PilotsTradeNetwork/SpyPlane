@@ -48,6 +48,8 @@ CREATE TABLE IF NOT EXISTS faction_states
     "faction"     TEXT NOT NULL,
     "active_csv"  TEXT NOT NULL,
     "pending_csv" TEXT NOT NULL,
+    "influence"   REAL,
+    "controlling" INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY ("system", "faction")
 );
 

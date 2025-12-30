@@ -29,12 +29,19 @@ class FactionStateService:
                 log("EDDN event missing StarSystem field for faction state extraction")
                 return []
             
+            controlling_faction_name = None
+            system_faction = message.get("SystemFaction")
+            if system_faction and isinstance(system_faction, dict):
+                controlling_faction_name = system_faction.get("Name")
+            
             return [
                 {
                     "system": star_system,
                     "faction": faction.get("Name"),
                     "active_csv": self._extract_states(faction.get("ActiveStates", [])),
                     "pending_csv": self._extract_states(faction.get("PendingStates", [])),
+                    "influence": faction.get("Influence"),
+                    "controlling": 1 if faction.get("Name") == controlling_faction_name else 0,
                 }
                 for faction in message.get("Factions", [])
                 if faction.get("Name")
@@ -43,15 +50,13 @@ class FactionStateService:
             log_exception("Error extracting faction states from EDDN event", e)
             return []
 
-    async def upsert_faction_states_from_event(self, json_data: dict) -> None:
+    async def replace_faction_states_from_event(self, json_data: dict) -> None:
         try:
             faction_states = self.extract_faction_states_from_event(json_data)
             
-            for state_data in faction_states:
-                await self.repo.upsert_faction_state(**state_data)
-            
             if faction_states:
-                log(f"Upserted {len(faction_states)} faction states from EDDN event")
+                await self.repo.replace_faction_states_for_system(faction_states)
+                log(f"Replaced {len(faction_states)} faction states from EDDN event")
         except Exception as e:
-            log_exception("Error upserting faction states from EDDN event", e)
+            log_exception("Error replacing faction states from EDDN event", e)
 

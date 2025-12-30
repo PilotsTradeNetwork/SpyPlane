@@ -26,11 +26,18 @@ class FactionStatesRepositoryTests(IsolatedAsyncioTestCase):
         except:
             pass
 
-    async def test_upsert_faction_state_insert(self):
-        """Test inserting a new faction state"""
-        await self.repo.upsert_faction_state(
-            "TestSystem", "TestFaction", "boom,expansion", "war"
-        )
+    async def test_replace_faction_states_for_system_insert(self):
+        """Test inserting new faction states for a system"""
+        await self.repo.replace_faction_states_for_system([
+            {
+                "system": "TestSystem",
+                "faction": "TestFaction",
+                "active_csv": "boom,expansion",
+                "pending_csv": "war",
+                "influence": 0.5,
+                "controlling": 1
+            }
+        ])
         
         result = await self.repo.get_faction_state("TestSystem", "TestFaction")
         self.assertIsNotNone(result)
@@ -38,23 +45,41 @@ class FactionStatesRepositoryTests(IsolatedAsyncioTestCase):
         self.assertEqual(result[1], "TestFaction")
         self.assertEqual(result[2], "boom,expansion")
         self.assertEqual(result[3], "war")
+        self.assertEqual(result[4], 0.5)
+        self.assertEqual(result[5], 1)
 
-    async def test_upsert_faction_state_update(self):
-        """Test updating an existing faction state"""
-        # Insert first
-        await self.repo.upsert_faction_state(
-            "TestSystem", "TestFaction", "boom", "war"
-        )
+    async def test_replace_faction_states_for_system_replace(self):
+        """Test replacing all faction states for a system"""
+        # Insert first set
+        await self.repo.replace_faction_states_for_system([
+            {
+                "system": "TestSystem",
+                "faction": "TestFaction",
+                "active_csv": "boom",
+                "pending_csv": "war",
+                "influence": 0.3,
+                "controlling": 0
+            }
+        ])
         
-        # Update it
-        await self.repo.upsert_faction_state(
-            "TestSystem", "TestFaction", "expansion,boom", "civil_war"
-        )
+        # Replace with new set
+        await self.repo.replace_faction_states_for_system([
+            {
+                "system": "TestSystem",
+                "faction": "TestFaction",
+                "active_csv": "expansion,boom",
+                "pending_csv": "civil_war",
+                "influence": 0.4,
+                "controlling": 1
+            }
+        ])
         
         result = await self.repo.get_faction_state("TestSystem", "TestFaction")
         self.assertIsNotNone(result)
         self.assertEqual(result[2], "expansion,boom")
         self.assertEqual(result[3], "civil_war")
+        self.assertEqual(result[4], 0.4)
+        self.assertEqual(result[5], 1)
 
     async def test_get_faction_state_not_found(self):
         """Test getting a non-existent faction state"""
@@ -64,16 +89,35 @@ class FactionStatesRepositoryTests(IsolatedAsyncioTestCase):
     async def test_get_all_faction_states_for_system(self):
         """Test getting all faction states for a system"""
         # Insert multiple factions for the same system
-        await self.repo.upsert_faction_state(
-            "TestSystem", "TestFaction", "boom", "war"
-        )
-        await self.repo.upsert_faction_state(
-            "TestSystem", "TestFaction2", "expansion", "civil_war"
-        )
+        await self.repo.replace_faction_states_for_system([
+            {
+                "system": "TestSystem",
+                "faction": "TestFaction",
+                "active_csv": "boom",
+                "pending_csv": "war",
+                "influence": 0.3,
+                "controlling": 0
+            },
+            {
+                "system": "TestSystem",
+                "faction": "TestFaction2",
+                "active_csv": "expansion",
+                "pending_csv": "civil_war",
+                "influence": 0.4,
+                "controlling": 1
+            }
+        ])
         # Insert a faction for a different system
-        await self.repo.upsert_faction_state(
-            "TestSystem2", "TestFaction", "boom", "war"
-        )
+        await self.repo.replace_faction_states_for_system([
+            {
+                "system": "TestSystem2",
+                "faction": "TestFaction",
+                "active_csv": "boom",
+                "pending_csv": "war",
+                "influence": 0.5,
+                "controlling": 0
+            }
+        ])
         
         results = await self.repo.get_all_faction_states_for_system("TestSystem")
         self.assertEqual(len(results), 2)
@@ -95,9 +139,16 @@ class FactionStatesRepositoryTests(IsolatedAsyncioTestCase):
     async def test_delete_faction_state(self):
         """Test deleting a faction state"""
         # Insert first
-        await self.repo.upsert_faction_state(
-            "TestSystem", "TestFaction", "boom", "war"
-        )
+        await self.repo.replace_faction_states_for_system([
+            {
+                "system": "TestSystem",
+                "faction": "TestFaction",
+                "active_csv": "boom",
+                "pending_csv": "war",
+                "influence": 0.3,
+                "controlling": 0
+            }
+        ])
         
         # Verify it exists
         result = await self.repo.get_faction_state("TestSystem", "TestFaction")
@@ -113,12 +164,26 @@ class FactionStatesRepositoryTests(IsolatedAsyncioTestCase):
     async def test_composite_key_uniqueness(self):
         """Test that the composite key (system, faction) works correctly"""
         # Insert same faction in different systems
-        await self.repo.upsert_faction_state(
-            "TestSystem", "TestFaction", "boom", "war"
-        )
-        await self.repo.upsert_faction_state(
-            "TestSystem2", "TestFaction", "expansion", "civil_war"
-        )
+        await self.repo.replace_faction_states_for_system([
+            {
+                "system": "TestSystem",
+                "faction": "TestFaction",
+                "active_csv": "boom",
+                "pending_csv": "war",
+                "influence": 0.3,
+                "controlling": 0
+            }
+        ])
+        await self.repo.replace_faction_states_for_system([
+            {
+                "system": "TestSystem2",
+                "faction": "TestFaction",
+                "active_csv": "expansion",
+                "pending_csv": "civil_war",
+                "influence": 0.4,
+                "controlling": 0
+            }
+        ])
         
         # Both should exist independently
         result1 = await self.repo.get_faction_state("TestSystem", "TestFaction")
@@ -131,9 +196,16 @@ class FactionStatesRepositoryTests(IsolatedAsyncioTestCase):
 
     async def test_empty_csv_values(self):
         """Test that empty CSV strings are handled correctly"""
-        await self.repo.upsert_faction_state(
-            "TestSystem", "TestFaction", "", ""
-        )
+        await self.repo.replace_faction_states_for_system([
+            {
+                "system": "TestSystem",
+                "faction": "TestFaction",
+                "active_csv": "",
+                "pending_csv": "",
+                "influence": None,
+                "controlling": 0
+            }
+        ])
         
         result = await self.repo.get_faction_state("TestSystem", "TestFaction")
         self.assertIsNotNone(result)
