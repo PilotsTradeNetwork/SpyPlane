@@ -11,6 +11,9 @@ from ptn.spyplane.commands import faction_track
 from ptn.spyplane.commands import faction_remove
 from ptn.spyplane.commands import faction_removeall
 from ptn.spyplane.commands import faction_list
+from ptn.spyplane.commands import faction_goal_add
+from ptn.spyplane.commands import faction_goal_remove
+from ptn.spyplane.commands import faction_goal_post
 from ptn.spyplane.commands import ping
 
 

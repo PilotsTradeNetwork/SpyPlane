@@ -107,11 +107,15 @@ class EddnListenerThread(threading.Thread):
                 return
 
             # Schedule async operations on the bot's event loop
+            # Run sequentially to avoid transaction conflicts
             try:
                 bot = get_bot()
                 if hasattr(bot, "loop") and bot.loop and bot.loop.is_running():
-                    bot.loop.create_task(self._handle_eddn_scout(star_system))
-                    bot.loop.create_task(self._handle_faction_states(json_data))
+                    # Create a single task that runs both operations sequentially
+                    async def process_eddn_event_async():
+                        await self._handle_eddn_scout(star_system)
+                        await self._handle_faction_states(json_data)
+                    bot.loop.create_task(process_eddn_event_async())
                 else:
                     log("Bot event loop not available for EDDN event processing")
             except RuntimeError:
