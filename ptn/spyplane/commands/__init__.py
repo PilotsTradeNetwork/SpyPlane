@@ -6,6 +6,7 @@ from ptn.spyplane.commands import faction_launch
 from ptn.spyplane.commands import faction_config_dump
 from ptn.spyplane.commands import faction_config
 from ptn.spyplane.commands import faction_operations_report
+from ptn.spyplane.commands import faction_daily_report
 from ptn.spyplane.commands import faction_track
 from ptn.spyplane.commands import faction_remove
 from ptn.spyplane.commands import faction_removeall
