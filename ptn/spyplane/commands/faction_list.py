@@ -1,6 +1,6 @@
 import csv
 import io
-from datetime import datetime
+from datetime import datetime, timezone
 
 import discord
 from discord import Interaction
@@ -32,7 +32,7 @@ async def faction_list(interaction: Interaction):
 
     # Write data
     for system in tracked_systems:
-        added_date = datetime.fromtimestamp(system.added_at).strftime(
+        added_date = datetime.fromtimestamp(system.added_at, timezone.utc).strftime(
             "%Y-%m-%d %H:%M:%S"
         )
         writer.writerow([system.system, system.priority, system.added_by, added_date])
@@ -44,7 +44,7 @@ async def faction_list(interaction: Interaction):
     # Create Discord file
     discord_file = discord.File(
         csv_file,
-        filename=f"tracked_systems_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+        filename=f"tracked_systems_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.csv",
     )
 
     # Send with summary

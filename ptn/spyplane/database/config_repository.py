@@ -37,6 +37,6 @@ class ConfigRepository(BaseRepository):
     async def update_config(self, name: str, value: str):
         await self.begin()
         await self.db().execute(
-            update_config, (value, time.mktime(datetime.now().timetuple()), name)
+            update_config, (value, time.mktime(datetime.now(timezone.utc).timetuple()), name)
         )
         await self.commit()
