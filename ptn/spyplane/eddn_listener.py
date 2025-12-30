@@ -13,6 +13,7 @@ from ptn.spyplane.bot_registry import get_bot
 from ptn.spyplane.constants import EDDN_URL, log, log_exception
 from ptn.spyplane.database.systems_repository import SystemsRepository
 from ptn.spyplane.helpers.journal_helper import JournalHelper
+from ptn.spyplane.services.faction_state_service import FactionStateService
 from ptn.spyplane.services.scout_recording_service import ScoutRecordingService
 
 
@@ -33,6 +34,7 @@ class EddnListenerThread(threading.Thread):
         self.journal_helper = JournalHelper()
         self.systems_repo = SystemsRepository()
         self.record_service = ScoutRecordingService()
+        self.faction_state_service = FactionStateService()
 
     def run(self):
         """Main listener loop"""
@@ -68,38 +70,30 @@ class EddnListenerThread(threading.Thread):
                         self._process_eddn_event(json_data)
 
             except zmq.ZMQError as e:
-                log_exception("EDDN listener ZMQ error", e)
-                sys.stdout.flush()
-                try:
-                    self.subscriber.disconnect(self.eddn_url)
-                except Exception:
-                    pass
-                if self.dump_file:
-                    self.dump_file.close()
-                    self.dump_file = None
-                time.sleep(5)  # Wait before reconnecting
-                # Reopen file for next connection attempt
-                if self.continue_listening:
-                    self.dump_file = self.dump_file_path.open("a")  # Append mode for reconnection
+                self._handle_connection_error("EDDN listener ZMQ error", e)
             except Exception as e:
-                log_exception("EDDN listener unexpected error", e)
-                sys.stdout.flush()
-                try:
-                    self.subscriber.disconnect(self.eddn_url)
-                except Exception:
-                    pass
-                if self.dump_file:
-                    self.dump_file.close()
-                    self.dump_file = None
-                time.sleep(5)  # Wait before reconnecting
-                # Reopen file for next connection attempt
-                if self.continue_listening:
-                    self.dump_file = self.dump_file_path.open("a")  # Append mode for reconnection
+                self._handle_connection_error("EDDN listener unexpected error", e)
 
         # Cleanup
         if self.dump_file:
             self.dump_file.close()
         log("EDDN listener stopped")
+
+    def _handle_connection_error(self, error_context: str, error: Exception) -> None:
+        """Handle connection errors by cleaning up and preparing for reconnection"""
+        log_exception(error_context, error)
+        sys.stdout.flush()
+        try:
+            self.subscriber.disconnect(self.eddn_url)
+        except Exception:
+            pass
+        if self.dump_file:
+            self.dump_file.close()
+            self.dump_file = None
+        time.sleep(5)  # Wait before reconnecting
+        # Reopen file for next connection attempt
+        if self.continue_listening:
+            self.dump_file = self.dump_file_path.open("a")  # Append mode for reconnection
 
     def _process_eddn_event(self, json_data: dict) -> None:
         """Process an EDDN event: record scout and delete Discord message"""
@@ -117,6 +111,7 @@ class EddnListenerThread(threading.Thread):
                 bot = get_bot()
                 if hasattr(bot, "loop") and bot.loop and bot.loop.is_running():
                     bot.loop.create_task(self._handle_eddn_scout(star_system))
+                    bot.loop.create_task(self._handle_faction_states(json_data))
                 else:
                     log("Bot event loop not available for EDDN event processing")
             except RuntimeError:
@@ -151,6 +146,13 @@ class EddnListenerThread(threading.Thread):
                 log(f"Bot channel not available for deleting message for system {system_name}")
         except Exception as e:
             log_exception("Error handling EDDN scout", e)
+
+    async def _handle_faction_states(self, json_data: dict) -> None:
+        """Handle faction state extraction and storage for EDDN event"""
+        try:
+            await self.faction_state_service.upsert_faction_states_from_event(json_data)
+        except Exception as e:
+            log_exception("Error handling faction states from EDDN event", e)
 
     def stop(self):
         """Stop the listener thread"""
