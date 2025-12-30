@@ -46,8 +46,33 @@ class DailyFactionStateService:
         
         return formatted_lines
 
+    def _get_ptn_status(self, influence: float | None) -> str | None:
+        if influence is None:
+            return None
+        if influence > 0.7:
+            return "Danger"
+        elif influence > 0.65:
+            return "Warning"
+        return None
+
     async def notify_daily_news(self, systems: list[str] = None, channel=None):
         embed = self.common_embed_setup("", "")
+        
+        # Get PTN Expansion warnings
+        ptn_warnings = await self.faction_states_repo.get_ptn_influence_warnings()
+        if ptn_warnings:
+            ptn_lines = []
+            for system, faction, influence, controlling in ptn_warnings:
+                status = self._get_ptn_status(influence)
+                if status:
+                    ptn_lines.append(f"{system} - {status} ({influence:.1%})")
+            
+            if ptn_lines:
+                embed.add_field(
+                    name="PTN Expansion",
+                    value="\n".join(ptn_lines),
+                    inline=False
+                )
         
         # Get systems to check
         if systems is None:
@@ -60,9 +85,10 @@ class DailyFactionStateService:
                 faction_states = await self.faction_states_repo.get_all_faction_states_for_system(system)
                 
                 # Filter to only factions with non-expansion states
+                # Note: faction_states now returns (system, faction, active, pending, influence, controlling)
                 factions_with_states = [
                     (system_name, faction, active, pending)
-                    for system_name, faction, active, pending in faction_states
+                    for system_name, faction, active, pending, _, _ in faction_states
                     if self._has_non_expansion_states(active, pending)
                 ]
                 
