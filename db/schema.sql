@@ -1,12 +1,8 @@
--- Final schema for the systems table
-DROP TABLE IF EXISTS systems;
-CREATE TABLE systems (
+CREATE TABLE IF NOT EXISTS systems (
     name TEXT PRIMARY KEY
 );
 
--- Final schema for the scout_systems table
-DROP TABLE IF EXISTS scout_systems;
-CREATE TABLE scout_systems
+CREATE TABLE IF NOT EXISTS scout_systems
 (
     "system_name" TEXT PRIMARY KEY,
     "priority"    TEXT NOT NULL,
@@ -14,7 +10,6 @@ CREATE TABLE scout_systems
     "added_at"    INTEGER NOT NULL
 );
 
--- Schema for the scout_history table
 CREATE TABLE IF NOT EXISTS scout_history
 (
     "id"          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -24,7 +19,6 @@ CREATE TABLE IF NOT EXISTS scout_history
     "timestamp"   INTEGER NOT NULL
 );
 
--- Schema for the configuration table
 CREATE TABLE IF NOT EXISTS configuration
 (
     "id"        INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,7 +27,6 @@ CREATE TABLE IF NOT EXISTS configuration
     "timestamp" INTEGER NOT NULL
 );
 
--- Schema for the scout_systems_posted table
 CREATE TABLE IF NOT EXISTS scout_systems_posted
 (
     "system_name" TEXT PRIMARY KEY,
@@ -41,7 +34,6 @@ CREATE TABLE IF NOT EXISTS scout_systems_posted
     "message_id"  INTEGER
 );
 
--- Schema for the faction_states table
 CREATE TABLE IF NOT EXISTS faction_states
 (
     "system"      TEXT NOT NULL,
@@ -53,7 +45,15 @@ CREATE TABLE IF NOT EXISTS faction_states
     PRIMARY KEY ("system", "faction")
 );
 
--- Consolidated inserts for the configuration table
+CREATE TABLE IF NOT EXISTS faction_goals
+(
+    "index"        INTEGER PRIMARY KEY,
+    "system"       TEXT NOT NULL,
+    "faction_one"  TEXT NOT NULL,
+    "faction_other" TEXT NOT NULL,
+    "goalkind"     TEXT NOT NULL
+);
+
 INSERT INTO configuration (name, value, timestamp)
 VALUES ('interval_hours', '4', 1655665882)
 ON CONFLICT DO NOTHING;

@@ -7,7 +7,7 @@ from discord.app_commands import AppCommandError
 from ptn.spyplane._metadata import __version__
 from ptn.spyplane.constants import (
     BOT_DEV_CHANNEL,
-    CHANNEL_BOTSPAM,
+    CHANNEL_SCOUT,
     CHANNEL_MONITORING,
     EMOJI_TARGET,
     error_gifs,
@@ -45,19 +45,19 @@ async def on_ready():
     try:
         log(f"{bot.user.name} has connected to Discord server. Version: {__version__}")
         
-        # Send hello gif to botspam channel
-        botspam_channel = bot.get_channel(CHANNEL_BOTSPAM)
-        if botspam_channel:
+        # Send hello gif to bot dev channel
+        botdev_channel = bot.get_channel(BOT_DEV_CHANNEL)
+        if botdev_channel:
             embed = Embed(
                 title="SPY PLANE ONLINE",
                 description=f"<@{bot.user.id}> connected, version **{__version__}**.",
                 color=0x00FF00  # Green color
             )
             embed.set_image(url=random.choice(hello_gifs))
-            await botspam_channel.send(embed=embed)
+            await botdev_channel.send(embed=embed)
         
         # Set bot.channel to dev channel for reaction handler
-        dev_channel = bot.get_channel(BOT_DEV_CHANNEL)
+        dev_channel = bot.get_channel(CHANNEL_SCOUT)
         bot.channel = dev_channel
         bot.report_channel = bot.get_channel(CHANNEL_MONITORING)
         bot.lock = asyncio.Lock()

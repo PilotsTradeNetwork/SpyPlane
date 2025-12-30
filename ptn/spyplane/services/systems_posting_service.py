@@ -80,7 +80,6 @@ class SystemsPostingService:
         return first_message
 
     async def _purge_channel(self):
-        """Purge the channel of all non-pinned messages"""
         bot = get_bot()
         try:
             if bot.channel is None:
@@ -116,7 +115,6 @@ class SystemsPostingService:
         daily_sequence: int,
         carryover: list[ScoutSystem],
     ) -> dict[str, list[ScoutSystem]]:
-        """Split systems by priority and apply rotation logic"""
         splits = {
             "Primary": [s for s in systems if s.priority == "Primary"],
             "Secondary": [s for s in systems if s.priority == "Secondary"],
@@ -149,7 +147,6 @@ class SystemsPostingService:
         }
 
     def _get_daily_sequence(self) -> int:
-        """Calculate daily sequence based on start date"""
         today = datetime.date.today()
         days_since_start = (today - self.start_date).days
         return days_since_start

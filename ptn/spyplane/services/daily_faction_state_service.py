@@ -50,9 +50,9 @@ class DailyFactionStateService:
         if influence is None:
             return None
         if influence > 0.7:
-            return "Danger"
+            return "danger"
         elif influence > 0.65:
-            return "Warning"
+            return "warning"
         return None
 
     async def notify_daily_news(self, systems: list[str] = None, channel=None):
