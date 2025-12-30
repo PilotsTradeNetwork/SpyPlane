@@ -41,6 +41,16 @@ CREATE TABLE IF NOT EXISTS scout_systems_posted
     "message_id"  INTEGER
 );
 
+-- Schema for the faction_states table
+CREATE TABLE IF NOT EXISTS faction_states
+(
+    "system"      TEXT NOT NULL,
+    "faction"     TEXT NOT NULL,
+    "active_csv"  TEXT NOT NULL,
+    "pending_csv" TEXT NOT NULL,
+    PRIMARY KEY ("system", "faction")
+);
+
 -- Consolidated inserts for the configuration table
 INSERT INTO configuration (name, value, timestamp)
 VALUES ('interval_hours', '4', 1655665882)
