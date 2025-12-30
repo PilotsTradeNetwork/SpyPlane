@@ -1,6 +1,6 @@
 import asyncio
 from asyncio.subprocess import PIPE, STDOUT
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import discord
 from discord import Interaction
@@ -30,7 +30,7 @@ async def faction_operations_report(interaction: Interaction):
 
     try:
         # Get scout history for embed (top 5 scouts)
-        three_months_ago = datetime.now() - timedelta(days=90)
+        three_months_ago = datetime.now(timezone.utc) - timedelta(days=90)
         repo = ScoutHistoryRepository()
         scout_history = await repo.get_history()
 

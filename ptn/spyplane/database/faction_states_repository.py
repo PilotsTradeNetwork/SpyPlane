@@ -28,7 +28,6 @@ SELECT system, faction, influence, controlling
 FROM faction_states
 WHERE faction = 'Pilots Trade Network'
   AND influence > 0.65
-  AND controlling = 0
 ORDER BY influence DESC
 """
 
@@ -47,23 +46,28 @@ class FactionStatesRepository(BaseRepository):
         
         system = faction_states[0]["system"]
         
-        await self.db().execute(delete_all_faction_states_for_system, [system])
-        
-        for state_data in faction_states:
-            await self.db().execute(
-                insert_faction_state,
-                [
-                    state_data["system"],
-                    state_data["faction"],
-                    state_data["active_csv"],
-                    state_data["pending_csv"],
-                    state_data.get("influence"),
-                    state_data.get("controlling", 0),
-                ],
-            )
-        
-        await self.db().commit()
-        log(f"Replaced {len(faction_states)} faction states for system: {system}")
+        try:
+            await self.begin()
+            await self.db().execute(delete_all_faction_states_for_system, [system])
+            
+            for state_data in faction_states:
+                await self.db().execute(
+                    insert_faction_state,
+                    [
+                        state_data["system"],
+                        state_data["faction"],
+                        state_data["active_csv"],
+                        state_data["pending_csv"],
+                        state_data.get("influence"),
+                        state_data.get("controlling", 0),
+                    ],
+                )
+            
+            await self.commit()
+            log(f"Replaced {len(faction_states)} faction states for system: {system}")
+        except Exception as e:
+            await self.rollback()
+            raise
 
     async def get_faction_state(
         self, system: str, faction: str
@@ -91,7 +95,12 @@ class FactionStatesRepository(BaseRepository):
             return [(row[0], row[1], row[2], row[3]) for row in rows]
 
     async def delete_faction_state(self, system: str, faction: str) -> None:
-        await self.db().execute(delete_faction_state, [system, faction])
-        await self.db().commit()
-        log(f"Deleted faction state: {system} - {faction}")
+        try:
+            await self.begin()
+            await self.db().execute(delete_faction_state, [system, faction])
+            await self.commit()
+            log(f"Deleted faction state: {system} - {faction}")
+        except Exception as e:
+            await self.rollback()
+            raise
 
