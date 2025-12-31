@@ -7,8 +7,8 @@ from ptn.spyplane.database.config_repository import ConfigRepository
 
 # Note: "index" is a reserved keyword in SQLite, so it must be quoted in all SQL queries
 insert_goal = """
-INSERT INTO faction_goals ("index", system, faction_one, faction_other, goalkind)
-VALUES (?, ?, ?, ?, ?)
+INSERT INTO faction_goals ("index", system, faction_one, faction_other, goalkind, additional_note)
+VALUES (?, ?, ?, ?, ?, ?)
 """
 
 delete_goal = """
@@ -16,14 +16,18 @@ DELETE FROM faction_goals
 WHERE "index" = ?
 """
 
+delete_all_goals = """
+DELETE FROM faction_goals
+"""
+
 select_all_goals = """
-SELECT "index", system, faction_one, faction_other, goalkind
+SELECT "index", system, faction_one, faction_other, goalkind, additional_note
 FROM faction_goals
 ORDER BY "index"
 """
 
 select_goal_by_index = """
-SELECT "index", system, faction_one, faction_other, goalkind
+SELECT "index", system, faction_one, faction_other, goalkind, additional_note
 FROM faction_goals
 WHERE "index" = ?
 """
@@ -35,12 +39,12 @@ class FactionGoalsRepository(BaseRepository):
         self.config_repo = config_repo or ConfigRepository()
 
     async def add_goal(
-        self, index: int, system: str, faction_one: str, faction_other: str, goalkind: str
+        self, index: int, system: str, faction_one: str, faction_other: str, goalkind: str, additional_note: str | None = None
     ) -> None:
         try:
             await self.begin()
             await self.db().execute(
-                insert_goal, [index, system, faction_one, faction_other, goalkind]
+                insert_goal, [index, system, faction_one, faction_other, goalkind, additional_note]
             )
             await self.commit()
             log(f"Added faction goal: index={index}, system={system}, goalkind={goalkind}")
@@ -61,20 +65,34 @@ class FactionGoalsRepository(BaseRepository):
             await self.rollback()
             raise
 
+    async def remove_all_goals(self) -> int:
+        """Remove all goals and return the number of goals removed"""
+        try:
+            await self.begin()
+            cursor = await self.db().execute(delete_all_goals)
+            await self.commit()
+            count = cursor.rowcount
+            if count > 0:
+                log(f"Removed all {count} faction goals")
+            return count
+        except Exception as e:
+            await self.rollback()
+            raise
+
     async def get_all_goals(
         self,
-    ) -> list[tuple[int, str, str, str, str]]:
+    ) -> list[tuple[int, str, str, str, str, str | None]]:
         async with self.db().execute(select_all_goals) as cur:
             rows = await cur.fetchall()
-            return [(row[0], row[1], row[2], row[3], row[4]) for row in rows]
+            return [(row[0], row[1], row[2], row[3], row[4], row[5]) for row in rows]
 
     async def get_goal_by_index(
         self, index: int
-    ) -> tuple[int, str, str, str, str] | None:
+    ) -> tuple[int, str, str, str, str, str | None] | None:
         async with self.db().execute(select_goal_by_index, [index]) as cur:
             row = await cur.fetchone()
             if row:
-                return (row[0], row[1], row[2], row[3], row[4])
+                return (row[0], row[1], row[2], row[3], row[4], row[5])
             return None
 
     async def get_message_id(self) -> int | None:

@@ -51,8 +51,27 @@ CREATE TABLE IF NOT EXISTS faction_goals
     "system"       TEXT NOT NULL,
     "faction_one"  TEXT NOT NULL,
     "faction_other" TEXT NOT NULL,
-    "goalkind"     TEXT NOT NULL
+    "goalkind"     TEXT NOT NULL,
+    "additional_note" TEXT
 );
+
+CREATE TABLE IF NOT EXISTS faction_header_footer
+(
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    header TEXT,
+    footer TEXT
+);
+
+INSERT INTO faction_header_footer (id, header, footer)
+VALUES (1, '__Current Short Term Goals__', '**__Note__:** Ensure you assess the system you are working in before performing any contribution.
+
+If a conflict is **pending** do not perform any actions for the faction (Your effort will have no effect).
+If a conflict is **active** refer to <#885511659022598145> for direction on how to contribute.
+
+If anything has happened that isn''t in <#878535931580284928> **__do not engage__**, ask for further direction in <#878738588647436288> from our faction team. (e.g, if an unexpected war/election occurs in a system we are working)
+
+*Last Updated <t:{}:D>*')
+ON CONFLICT(id) DO NOTHING;
 
 INSERT INTO configuration (name, value, timestamp)
 VALUES ('interval_hours', '4', 1655665882)

@@ -73,10 +73,10 @@ async def on_ready():
             post_service.tick_check_and_schedule.start()
 
         # Start EDDN listener thread if not already running
-        eddn_listener_thread = get_eddn_listener_thread()
-        if not eddn_listener_thread.is_alive():
-            eddn_listener_thread.start()
-            log("EDDN listener thread started")
+        # eddn_listener_thread = get_eddn_listener_thread()
+        # if not eddn_listener_thread.is_alive():
+        #     eddn_listener_thread.start()
+        #     log("EDDN listener thread started")
     except Exception as e:
         log_exception("on_ready", e)
 
