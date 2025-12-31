@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 from ptn.spyplane.constants import (
     GUILD_ID,
     DB_PATH,
+    EDDN_URL,
     log,
 )
 from discord.ext.prometheus import PrometheusCog
@@ -70,6 +71,17 @@ register_bot(bot)  # Register bot after creation
 
 
 def run():
+    # Log EDDN URL as a banner on startup
+    banner_width = 60
+    border = "=" * banner_width
+    log("")
+    log(border)
+    log(" " * ((banner_width - len("EDDN URL")) // 2) + "EDDN URL")
+    log(border)
+    log(f"  {EDDN_URL}")
+    log(border)
+    log("")
+    
     # Import Commands and DiscordListener here to avoid circular import
     from ptn.spyplane.commands import Commands
     from ptn.spyplane.discord_listener import DiscordListener

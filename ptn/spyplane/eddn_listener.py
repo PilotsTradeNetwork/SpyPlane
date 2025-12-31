@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 import threading
 import time
@@ -31,6 +32,8 @@ class EddnListenerThread(threading.Thread):
         self.continue_listening = True
         self.dump_file_path = dump_file or Path("./workspace/eddn_events.jsonl")
         self.dump_file: Optional[object] = None
+        # Check if EDDN_DUMP environment variable is set to "True"
+        self.should_dump = os.getenv("EDDN_DUMP", "false") == "True"
         self.journal_helper = JournalHelper()
         self.systems_repo = SystemsRepository()
         self.record_service = ScoutRecordingService()
@@ -38,12 +41,15 @@ class EddnListenerThread(threading.Thread):
 
     def run(self):
         """Main listener loop"""
-        # Ensure directory exists
-        self.dump_file_path.parent.mkdir(parents=True, exist_ok=True)
-
-        # Open file for appending (preserves data across reconnections)
-        self.dump_file = self.dump_file_path.open("a")
-        log(f"EDDN listener started. Dumping events to {self.dump_file_path}")
+        # Only open file if dumping is enabled
+        if self.should_dump:
+            # Ensure directory exists
+            self.dump_file_path.parent.mkdir(parents=True, exist_ok=True)
+            # Open file for appending (preserves data across reconnections)
+            self.dump_file = self.dump_file_path.open("a")
+            log(f"EDDN listener started. Dumping events to {self.dump_file_path}")
+        else:
+            log("EDDN listener started. File dumping disabled (EDDN_DUMP not set to 'True')")
 
         while self.continue_listening:
             try:
@@ -63,11 +69,13 @@ class EddnListenerThread(threading.Thread):
 
                     # Filter events - only dump FSDJump, Location, and CarrierJump events from tracked systems
                     if self.journal_helper.is_target_event(json_data):
-                        self.dump_file.write(simplejson.dumps(json_data) + "\n")
-                        self.dump_file.flush()
-
                         # Process the event: record scout and delete message
                         self._process_eddn_event(json_data)
+                    
+                    # Dump all events to file if EDDN_DUMP is enabled
+                    if self.should_dump and self.dump_file:
+                        self.dump_file.write(simplejson.dumps(json_data) + "\n")
+                        self.dump_file.flush()
 
             except zmq.ZMQError as e:
                 self._handle_connection_error("EDDN listener ZMQ error", e)
@@ -91,8 +99,8 @@ class EddnListenerThread(threading.Thread):
             self.dump_file.close()
             self.dump_file = None
         time.sleep(5)  # Wait before reconnecting
-        # Reopen file for next connection attempt
-        if self.continue_listening:
+        # Reopen file for next connection attempt if dumping is enabled
+        if self.continue_listening and self.should_dump:
             self.dump_file = self.dump_file_path.open("a")  # Append mode for reconnection
 
     def _process_eddn_event(self, json_data: dict) -> None:
