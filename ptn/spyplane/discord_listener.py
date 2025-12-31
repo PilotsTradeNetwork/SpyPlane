@@ -1,4 +1,5 @@
 import asyncio
+import os
 import random
 
 from discord import Embed, RawReactionActionEvent, Message, Interaction, app_commands
@@ -72,11 +73,15 @@ async def on_ready():
         if not post_service.tick_check_and_schedule.is_running():
             post_service.tick_check_and_schedule.start()
 
-        # Start EDDN listener thread if not already running
-        # eddn_listener_thread = get_eddn_listener_thread()
-        # if not eddn_listener_thread.is_alive():
-        #     eddn_listener_thread.start()
-        #     log("EDDN listener thread started")
+        # Start EDDN listener thread if not already running and not disabled
+        eddn_disable = os.getenv("EDDN_DISABLE", "False").lower() == "true"
+        if not eddn_disable:
+            eddn_listener_thread = get_eddn_listener_thread()
+            if not eddn_listener_thread.is_alive():
+                eddn_listener_thread.start()
+                log("EDDN listener thread started")
+        else:
+            log("EDDN listener thread disabled via EDDN_DISABLE environment variable")
     except Exception as e:
         log_exception("on_ready", e)
 
