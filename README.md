@@ -2,6 +2,11 @@
 
 Scouting bot
 
+## Documentation
+
+- [Faction Goals Commands](docs/FACTION_GOALS.md) - Documentation for managing faction goals (add, remove, post, embed, list)
+- [Faction Tracking Commands](docs/FACTION_TRACKING.md) - Documentation for tracking systems, EDDN listener, and reporting
+
 # Functional Notes
 
 [Link to Notes](https://docs.google.com/document/d/1a4U9vYSLk9_sQVjA3xz49KnCS0hibOq2ELEXc87X9yI/edit?usp=sharing)
