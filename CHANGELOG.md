@@ -1,4 +1,6 @@
 # Changelog
+## 0.0.6
+- Make sheet sync response ephemeral
 
 ## 0.0.5
 - [#44](https://github.com/PilotsTradeNetwork/SpyPlane/pull/44) Remove 100 message limit from scouting purge (IndorilReborn)
