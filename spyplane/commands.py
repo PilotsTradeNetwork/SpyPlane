@@ -55,7 +55,7 @@ async def report(interaction: Interaction):
 async def spy_plane_sync(interaction: Interaction):
     """Transfer orders from command to field agents. Codeword: SyncSheet2DB"""
     print(f'User {interaction.user.name} is syncing the DB with sheet on systems to scout: {__version__}.')
-    await interaction.response.defer()
+    await interaction.response.defer(ephemeral=True)
     await SyncService().sync_db_sheet()
     await interaction.followup.send(f"Spy plane is fueled and ready to go")
 
