@@ -4,7 +4,7 @@ from urllib.parse import quote
 import discord
 
 from ptn.spyplane.bot_registry import get_bot
-from ptn.spyplane.constants import GOALS_CHANNEL, log
+from ptn.spyplane.constants import EMOJI_ASSASSIN, EMOJI_COURIER, EMOJI_PARTNERSHIP, GOALS_CHANNEL, log
 from ptn.spyplane.database.faction_goals_repository import FactionGoalsRepository
 from ptn.spyplane.database.faction_header_footer_repository import FactionHeaderFooterRepository
 
@@ -18,10 +18,10 @@ def render_goal_template(goalkind: str, system: str, faction_one: str, faction_o
         return faction_one
     
     templates = {
-        "RaiseInf": f"Raise INF for __{faction_one}__ to spark the conflict with __{faction_other}__ <:Courier:809221441915977728>",
-        "WinElection": f"Win the Election for __{faction_one}__.  <:Partnership:841790422698557520>",
-        "WinWar": f"Win the War for __Pilots Trade Network__. <:Assassin:806498760586035200>",
-        "WinCivilWar": f"Win the Civil war for __{faction_one}__. <:Assassin:806498760586035200>",
+        "RaiseInf": f"Raise INF for __{faction_one}__ to spark the conflict with __{faction_other}__ <:Courier:{EMOJI_COURIER}>",
+        "WinElection": f"Win the Election for __{faction_one}__.  <:partnership:{EMOJI_PARTNERSHIP}>",
+        "WinWar": f"Win the War for __Pilots Trade Network__. <:Assassin:{EMOJI_ASSASSIN}>",
+        "WinCivilWar": f"Win the Civil war for __{faction_one}__. <:Assassin:{EMOJI_ASSASSIN}>",
     }
     
     template = templates.get(goalkind, f"Unknown goal kind: {goalkind}")
