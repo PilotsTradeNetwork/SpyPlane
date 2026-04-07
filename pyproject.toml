@@ -6,16 +6,16 @@ authors = [
     { name = "PTN Devs" },
 ]
 dependencies = [
-    "python-dotenv==0.21.1",
-    "discord-py==2.6.3",
-    "aiosqlite==0.21.0",
-    "gspread==5.12.4",
-    "aiocron==1.8",
-    "jq==1.10.0",
-    "pytz==2022.7.1",
-    "aiohttp==3.12.15",
-    "discord-ext-prometheus==0.2.1",
-    "httpx==0.28.1",
+    "python-dotenv~=1.2",
+    "discord-py~=2.6",
+    "aiosqlite~=0.21",
+    "gspread~=5.12",
+    "aiocron~=2.0",
+    "jq~=1.10",
+    "pytz>=2026.0",
+    "aiohttp~=3.12",
+    "discord-ext-prometheus~=0.2",
+    "httpx~=0.28",
 ]
 requires-python = ">=3.10"
 
