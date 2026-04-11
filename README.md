@@ -21,7 +21,7 @@ Scouting bot
 3. Copy `.env.sample` to `.env` and update the values for TEST and PROD
 4. **Create the database**: `./db/recreate.sh`
 5. **Seed with test data**: `cd db/data && uv run python seed_database.py`
-6. Startup the bot with `uv run spy` or `uv run python -m spyplane.spy_plane`
+6. Startup the bot with `uv run spy` or `uv run python -m ptn.spyplane.spy_plane`
 
 ### Option 2: Manual virtual environment
 1. Install [uv using instructions here](https://github.com/astral-sh/uv#installation)
@@ -31,7 +31,7 @@ Scouting bot
 5. Copy `.env.sample` to `.env` and update the values for TEST and PROD
 6. **Create the database**: `./db/recreate.sh`
 7. **Seed with test data**: `cd db/data && python seed_database.py`
-8. Startup the bot with `uv run spy` or `uv run python -m spyplane.spy_plane`
+8. Startup the bot with `uv run spy` or `uv run python -m ptn.spyplane.spy_plane`
 
 ## Running tests
 
@@ -70,4 +70,3 @@ docker run \
 
 echo 'Spyplane deployment done!'
 ```
-
