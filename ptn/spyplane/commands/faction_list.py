@@ -32,9 +32,7 @@ async def faction_list(interaction: Interaction):
 
     # Write data
     for system in tracked_systems:
-        added_date = datetime.fromtimestamp(system.added_at, timezone.utc).strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
+        added_date = datetime.fromtimestamp(system.added_at, timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
         writer.writerow([system.system, system.priority, system.added_by, added_date])
 
     # Create file object
@@ -64,4 +62,3 @@ async def faction_list(interaction: Interaction):
     embed.add_field(name="📊 Tertiary", value=str(tertiary_count), inline=True)
 
     await interaction.followup.send(embed=embed, file=discord_file)
-

@@ -10,9 +10,8 @@ bot = get_bot()
 async def faction_daily_report(interaction: Interaction):
     """Generate and post the daily faction state report"""
     await interaction.response.defer()
-    
+
     service = DailyFactionStateService()
     await service.notify_daily_news(channel=interaction.channel)
-    
-    await interaction.followup.send("✅ Daily faction state report posted", ephemeral=True)
 
+    await interaction.followup.send("✅ Daily faction state report posted", ephemeral=True)

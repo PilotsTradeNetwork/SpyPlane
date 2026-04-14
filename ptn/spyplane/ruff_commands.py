@@ -3,15 +3,15 @@
 Ruff command wrappers for the SpyPlane project.
 """
 
-import sys
 import subprocess
+import sys
 from pathlib import Path
 
 
 def run_ruff_command(args):
     """Run ruff with the given arguments."""
     try:
-        result = subprocess.run(["ruff"] + args, cwd=Path.cwd())
+        result = subprocess.run(["ruff", *args], cwd=Path.cwd())
         sys.exit(result.returncode)
     except FileNotFoundError:
         print("Error: ruff not found. Please install it with: uv sync --extra dev")

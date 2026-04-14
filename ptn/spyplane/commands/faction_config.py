@@ -15,10 +15,7 @@ bot = get_bot()
 )
 async def faction_config(interaction: Interaction, name: str, value: str):
     """Assign standard operating protocols"""
-    log(
-        f"User {interaction.user.name} is attempting to set config {name} to {value}: {__version__}."
-    )
+    log(f"User {interaction.user.name} is attempting to set config {name} to {value}: {__version__}.")
     message = await ConfigService().update_config(name, value)
     log(message)
     await interaction.response.send_message(message)
-

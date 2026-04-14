@@ -4,24 +4,25 @@ from typing import TYPE_CHECKING
 
 import aiosqlite
 from aiosqlite import Connection
-from discord import Intents, Object, Emoji
+from discord import Emoji, Intents, Object
 from discord.ext.commands import Bot, when_mentioned_or
 
 if TYPE_CHECKING:
     from asyncio import Lock
     from threading import Thread
+
     from discord.abc import GuildChannel, PrivateChannel
 
-from ptn.spyplane.constants import (
-    GUILD_ID,
-    DB_PATH,
-    EDDN_URL,
-    log,
-)
 from discord.ext.prometheus import PrometheusCog
 
 from ptn.spyplane.bot_registry import register_bot
-from ptn.spyplane.constants import TOKEN
+from ptn.spyplane.constants import (
+    DB_PATH,
+    EDDN_URL,
+    GUILD_ID,
+    TOKEN,
+    log,
+)
 
 
 class SpyPlane(Bot):
@@ -51,6 +52,7 @@ class SpyPlane(Bot):
     async def close(self):
         # Stop EDDN listener thread
         from ptn.spyplane.eddn_listener import get_eddn_listener_thread
+
         eddn_listener_thread = get_eddn_listener_thread()
         if eddn_listener_thread.is_alive():
             log("Stopping EDDN listener thread")
@@ -81,11 +83,11 @@ def run():
     log(f"  {EDDN_URL}")
     log(border)
     log("")
-    
+
     # Import Commands and DiscordListener here to avoid circular import
     from ptn.spyplane.commands import Commands
     from ptn.spyplane.discord_listener import DiscordListener
-    
+
     Commands()  # This imports all command modules to register them
     DiscordListener()  # This imports all event handlers to register them
     asyncio.run(spyplane())

@@ -16,9 +16,7 @@ async def run_export_script():
     """Run the shell script to export scout history to CSV"""
     cmd = "./ptn/spyplane/scripts/export_scout_history.sh"
     log("[INFO] Starting Export...")
-    process = await asyncio.create_subprocess_shell(
-        cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT
-    )
+    process = await asyncio.create_subprocess_shell(cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT)
     await process.wait()
     return process.returncode
 
@@ -35,9 +33,7 @@ async def faction_operations_report(interaction: Interaction):
         scout_history = await repo.get_history()
 
         # Filter to last 3 months
-        recent_scouts = [
-            scout for scout in scout_history if scout.timestamp >= three_months_ago
-        ]
+        recent_scouts = [scout for scout in scout_history if scout.timestamp >= three_months_ago]
 
         # Create embed for top scouts
         if not recent_scouts:
@@ -90,9 +86,7 @@ async def faction_operations_report(interaction: Interaction):
             log(f"[INFO] Export failed with exitcode: {exitcode}")
             # Send embed only if CSV export fails
             await interaction.followup.send(embed=embed)
-            await interaction.followup.send(
-                "⚠️ CSV export failed, but scout rankings are available above."
-            )
+            await interaction.followup.send("⚠️ CSV export failed, but scout rankings are available above.")
 
     except Exception as e:
         log(f"[ERROR] Faction operations report failed: {e}")
@@ -102,4 +96,3 @@ async def faction_operations_report(interaction: Interaction):
             description="Asset compromised. Report failed. Escalate to flight command.",
         )
         await interaction.followup.send(embed=embed)
-

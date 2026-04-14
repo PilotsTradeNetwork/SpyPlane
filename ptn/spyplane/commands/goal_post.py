@@ -16,14 +16,14 @@ def render_goal_template(goalkind: str, system: str, faction_one: str, faction_o
     # Custom goalkind just returns the custom text directly
     if goalkind == "Custom":
         return faction_one
-    
+
     templates = {
         "RaiseInf": f"Raise INF for __{faction_one}__ to spark the conflict with __{faction_other}__ <:Courier:{EMOJI_COURIER}>",
         "WinElection": f"Win the Election for __{faction_one}__.  <:partnership:{EMOJI_PARTNERSHIP}>",
         "WinWar": f"Win the War for __Pilots Trade Network__. <:Assassin:{EMOJI_ASSASSIN}>",
         "WinCivilWar": f"Win the Civil war for __{faction_one}__. <:Assassin:{EMOJI_ASSASSIN}>",
     }
-    
+
     template = templates.get(goalkind, f"Unknown goal kind: {goalkind}")
     return template
 
@@ -41,17 +41,13 @@ async def goal_post(interaction: discord.Interaction):
         goals = await repo.get_all_goals()
 
         if not goals:
-            await interaction.followup.send(
-                "❌ No faction goals found. Add goals using `/goal_add` first."
-            )
+            await interaction.followup.send("❌ No faction goals found. Add goals using `/goal_add` first.")
             return
 
         # Get the goals channel
         goals_channel = bot.get_channel(GOALS_CHANNEL)
         if not goals_channel:
-            await interaction.followup.send(
-                "❌ Goals channel not found. Please check bot configuration."
-            )
+            await interaction.followup.send("❌ Goals channel not found. Please check bot configuration.")
             return
 
         # Get old message ID and try to delete the old message
@@ -69,13 +65,13 @@ async def goal_post(interaction: discord.Interaction):
 
         # Get header and footer
         header, footer_template = await header_footer_repo.get_header_footer()
-        
+
         # Replace timestamp placeholder in footer with current unix timestamp
         current_timestamp = int(datetime.now(timezone.utc).timestamp())
         footer = footer_template.replace("{}", str(current_timestamp))
 
         # Use header as title, or default if not set
-        embed_title = header if header else "🎯 Faction Goals"
+        embed_title = header or "🎯 Faction Goals"
 
         # Create embed
         embed = discord.Embed(
@@ -87,13 +83,13 @@ async def goal_post(interaction: discord.Interaction):
         # Set embed author
         embed.set_author(
             name="Director Castro",
-            icon_url="https://pilotstradenetwork.com/wp-content/uploads/2021/08/PTN_Dark_wText-768x461.png"
+            icon_url="https://pilotstradenetwork.com/wp-content/uploads/2021/08/PTN_Dark_wText-768x461.png",
         )
 
         # Add goals to embed
         # Sort by index order first
         goals_sorted = sorted(goals, key=lambda x: x[0])
-        
+
         # Group goals by system (maintaining sorted order)
         systems_dict = {}
         for goal in goals_sorted:
@@ -101,7 +97,7 @@ async def goal_post(interaction: discord.Interaction):
             if system not in systems_dict:
                 systems_dict[system] = []
             systems_dict[system].append(goal)
-        
+
         # Get unique systems in order of first appearance (which is sorted by index)
         systems_ordered = []
         seen_systems = set()
@@ -110,37 +106,37 @@ async def goal_post(interaction: discord.Interaction):
             if system not in seen_systems:
                 systems_ordered.append(system)
                 seen_systems.add(system)
-        
+
         # Format goals as fields - one field per system
         system_number = 0
         for system in systems_ordered:
             system_number += 1
             system_goals = systems_dict[system]
             system_url = f"https://inara.cz/elite/starsystem/?search={quote(system)}"
-            
+
             # Build the field value with all goals for this system
             field_value_parts = []
-            
+
             if len(system_goals) > 1:
                 # Multiple goals - add a, b, c prefixes
                 for idx, goal in enumerate(system_goals):
                     index, _, faction_one, faction_other, goalkind, additional_note = goal
                     rendered_template = render_goal_template(goalkind, system, faction_one, faction_other)
-                    suffix = chr(ord('a') + idx)  # a, b, c, ...
+                    suffix = chr(ord("a") + idx)  # a, b, c, ...
                     field_value_parts.append(f"{suffix}. {rendered_template}")
                     if additional_note:
                         field_value_parts.append(f"    {additional_note}")
             else:
                 # Single goal - no prefix needed
-                index, _, faction_one, faction_other, goalkind, additional_note = system_goals[0]
+                _index, _, faction_one, faction_other, goalkind, additional_note = system_goals[0]
                 rendered_template = render_goal_template(goalkind, system, faction_one, faction_other)
                 field_value_parts.append(rendered_template)
                 if additional_note:
                     field_value_parts.append(f"    {additional_note}")
-            
+
             # Add system link at the end
             field_value_parts.append(system_url)
-            
+
             # Create single field for this system
             embed.add_field(
                 name=f"{system_number}. {system}",
@@ -168,13 +164,8 @@ async def goal_post(interaction: discord.Interaction):
         await repo.set_message_id(message.id)
         log(f"Posted faction goals embed with message ID: {message.id}")
 
-        await interaction.followup.send(
-            "✅ Faction goals embed posted/updated.", ephemeral=True
-        )
+        await interaction.followup.send("✅ Faction goals embed posted/updated.", ephemeral=True)
 
     except Exception as e:
         log(f"Error posting faction goals: {e}")
-        await interaction.followup.send(
-            f"❌ Error posting faction goals: {str(e)}"
-        )
-
+        await interaction.followup.send(f"❌ Error posting faction goals: {e!s}")

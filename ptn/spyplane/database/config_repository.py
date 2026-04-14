@@ -29,14 +29,9 @@ class ConfigRepository(BaseRepository):
     async def dump_config(self) -> list[Config]:
         async with self.db().execute(dump_config) as cur:
             rows = await cur.fetchall()
-        return [
-            Config(row[0], row[1], row[2], datetime.fromtimestamp(row[3], timezone.utc))
-            for row in rows
-        ]
+        return [Config(row[0], row[1], row[2], datetime.fromtimestamp(row[3], timezone.utc)) for row in rows]
 
     async def update_config(self, name: str, value: str):
         await self.begin()
-        await self.db().execute(
-            update_config, (value, time.mktime(datetime.now(timezone.utc).timetuple()), name)
-        )
+        await self.db().execute(update_config, (value, time.mktime(datetime.now(timezone.utc).timetuple()), name))
         await self.commit()

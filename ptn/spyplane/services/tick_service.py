@@ -37,8 +37,6 @@ class TickService:
             resp = await client.get(link)
             resp.raise_for_status()
             tick_info = resp.json()
-        dt = datetime.fromisoformat(
-            tick_info["lastGalaxyTick"].rstrip("Z")
-        )  # python >= 3.11 understands timezone
+        dt = datetime.fromisoformat(tick_info["lastGalaxyTick"].rstrip("Z"))  # python >= 3.11 understands timezone
         dt = dt.replace(tzinfo=timezone.utc)
         return int(dt.timestamp())

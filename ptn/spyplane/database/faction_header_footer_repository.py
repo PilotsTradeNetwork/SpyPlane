@@ -41,8 +41,8 @@ class FactionHeaderFooterRepository(BaseRepository):
             if cursor.rowcount == 0:
                 await self.db().execute(insert_header_footer, ["", footer])
             await self.commit()
-            log(f"Updated faction goals footer")
-        except Exception as e:
+            log("Updated faction goals footer")
+        except Exception:
             await self.rollback()
             raise
 
@@ -53,8 +53,8 @@ class FactionHeaderFooterRepository(BaseRepository):
             if cursor.rowcount == 0:
                 await self.db().execute(insert_header_footer, [header, ""])
             await self.commit()
-            log(f"Updated faction goals header")
-        except Exception as e:
+            log("Updated faction goals header")
+        except Exception:
             await self.rollback()
             raise
 
@@ -63,15 +63,14 @@ class FactionHeaderFooterRepository(BaseRepository):
             await self.begin()
             # Get current values
             current_header, current_footer = await self.get_header_footer()
-            
+
             # Use provided values or keep current ones
             new_header = header if header is not None else current_header
             new_footer = footer if footer is not None else current_footer
-            
+
             await self.db().execute(insert_header_footer, [new_header, new_footer])
             await self.commit()
-            log(f"Updated faction goals header and/or footer")
-        except Exception as e:
+            log("Updated faction goals header and/or footer")
+        except Exception:
             await self.rollback()
             raise
-

@@ -13,16 +13,12 @@ class SystemsPostingService:
     def __init__(self, repo=None, config_repo=None):
         self.repo = repo or SystemsRepository()
         self.config_repo = config_repo or ConfigRepository()
-        self.start_date = datetime.date(
-            2022, 6, 18
-        )  # start day randomly chosen for the daily sequence
+        self.start_date = datetime.date(2022, 6, 18)  # start day randomly chosen for the daily sequence
 
     async def publish_systems_to_scout(self):
         bot = get_bot()
         tracked_systems = await self.repo.get_all_tracked_systems()
-        should_carryover = (
-            await self.config_repo.get_config("carryover")
-        ).value.lower() in ["true", "yes", "y", "t"]
+        should_carryover = (await self.config_repo.get_config("carryover")).value.lower() in ["true", "yes", "y", "t"]
         carryover = []
         if should_carryover:
             carryover = await self.repo.get_carryover_systems()
@@ -31,9 +27,7 @@ class SystemsPostingService:
         await self._purge_channel()
 
         daily_sequence = self._get_daily_sequence()
-        splits = self.split_systems_by_priority(
-            tracked_systems, daily_sequence, carryover
-        )
+        splits = self.split_systems_by_priority(tracked_systems, daily_sequence, carryover)
 
         # Log counts before posting
         log(
@@ -45,9 +39,7 @@ class SystemsPostingService:
         await self.post_list(splits, "Tertiary")
 
         if len(tracked_systems):
-            await bot.channel.send(
-                f"<@&{FACTION_SCOUT_ROLE_ID}> List Updated\nLink to top: {first_message.jump_url}"
-            )
+            await bot.channel.send(f"<@&{FACTION_SCOUT_ROLE_ID}> List Updated\nLink to top: {first_message.jump_url}")
 
     async def post_list(self, splits, priority_string):
         bot = get_bot()
@@ -134,15 +126,13 @@ class SystemsPostingService:
             + [
                 s
                 for s in carryover
-                if s.priority == "Secondary"
-                and s.system not in [item.system for item in secondary_today]
+                if s.priority == "Secondary" and s.system not in [item.system for item in secondary_today]
             ],
             "Tertiary": tertiary_today
             + [
                 s
                 for s in carryover
-                if s.priority == "Tertiary"
-                and s.system not in [item.system for item in tertiary_today]
+                if s.priority == "Tertiary" and s.system not in [item.system for item in tertiary_today]
             ],
         }
 
@@ -154,7 +144,4 @@ class SystemsPostingService:
     @staticmethod  # https://stackoverflow.com/questions/2130016/splitting-a-list-into-n-parts-of-approximately-equal-length
     def split(array, split_size):
         k, m = divmod(len(array), split_size)
-        return (
-            array[i * k + min(i, m) : (i + 1) * k + min(i + 1, m)]
-            for i in range(split_size)
-        )
+        return (array[i * k + min(i, m) : (i + 1) * k + min(i + 1, m)] for i in range(split_size))

@@ -1,4 +1,4 @@
-from discord import Interaction, app_commands, TextStyle
+from discord import Interaction, TextStyle
 from discord.ui import Modal, TextInput
 
 from ptn.spyplane.bot_registry import get_bot
@@ -16,7 +16,7 @@ class HeaderFooterModal(Modal):
         required=False,
         max_length=256,
     )
-    
+
     footer_input = TextInput(
         label="Footer",
         placeholder="Enter footer text. Use {} as placeholder for timestamp.",
@@ -24,38 +24,45 @@ class HeaderFooterModal(Modal):
         required=False,
         max_length=2000,
     )
-    
+
     def __init__(self, current_header: str = "", current_footer: str = ""):
         # Ensure values are strings
         current_header = str(current_header) if current_header else ""
         current_footer = str(current_footer) if current_footer else ""
-        
+
         # Set default values before calling super().__init__()
-        self.header_input.default = current_header if current_header else None
-        self.footer_input.default = current_footer if current_footer else None
-        
+        self.header_input.default = current_header or None
+        self.footer_input.default = current_footer or None
+
         super().__init__(title="Edit Header and Footer")
-        
+
         # Store current values to use if fields are left empty
         self.current_header = current_header
         self.current_footer = current_footer
 
     async def on_submit(self, interaction: Interaction):
         repo = FactionHeaderFooterRepository()
-        
+
         try:
             # Get values from inputs, or use current values if empty
-            header = self.header_input.value.strip() if self.header_input.value and self.header_input.value.strip() else self.current_header
-            footer = self.footer_input.value.strip() if self.footer_input.value and self.footer_input.value.strip() else self.current_footer
-            
+            header = (
+                self.header_input.value.strip()
+                if self.header_input.value and self.header_input.value.strip()
+                else self.current_header
+            )
+            footer = (
+                self.footer_input.value.strip()
+                if self.footer_input.value and self.footer_input.value.strip()
+                else self.current_footer
+            )
+
             # Check if anything actually changed
             header_changed = header != self.current_header
             footer_changed = footer != self.current_footer
-            
+
             if not header_changed and not footer_changed:
                 await interaction.response.send_message(
-                    "ℹ️ No changes detected. Header and footer remain unchanged.",
-                    ephemeral=True
+                    "ℹ️ No changes detected. Header and footer remain unchanged.", ephemeral=True
                 )
                 return
 
@@ -74,8 +81,7 @@ class HeaderFooterModal(Modal):
         except Exception as e:
             log(f"Error updating faction goals header/footer: {e}")
             await interaction.response.send_message(
-                f"❌ Error updating faction goals header/footer: {str(e)}",
-                ephemeral=True
+                f"❌ Error updating faction goals header/footer: {e!s}", ephemeral=True
             )
 
 
@@ -83,20 +89,16 @@ class HeaderFooterModal(Modal):
 async def goal_embed(interaction: Interaction):
     """Update the header and/or footer text for the faction goals embed"""
     repo = FactionHeaderFooterRepository()
-    
+
     try:
         # Get current values to pre-populate the modal
         current_header, current_footer = await repo.get_header_footer()
-        
+
         # Create and populate the modal
         modal = HeaderFooterModal(current_header=current_header, current_footer=current_footer)
-        
+
         await interaction.response.send_modal(modal)
-        
+
     except Exception as e:
         log(f"Error opening header/footer modal: {e}")
-        await interaction.response.send_message(
-            f"❌ Error opening header/footer editor: {str(e)}",
-            ephemeral=True
-        )
-
+        await interaction.response.send_message(f"❌ Error opening header/footer editor: {e!s}", ephemeral=True)

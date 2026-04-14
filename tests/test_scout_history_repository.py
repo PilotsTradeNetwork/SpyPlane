@@ -26,9 +26,7 @@ class ScoutHistoryRepositoryTests(IsolatedAsyncioTestCase):
             354990093980663889,
             datetime.now(),
         )
-        history: list[ScoutHistory] = await self.subject.get_history(
-            username="zaszrespawned"
-        )
+        history: list[ScoutHistory] = await self.subject.get_history(username="zaszrespawned")
         for scout in history:
             print(scout)
         self.assertEqual(len(history), 1)

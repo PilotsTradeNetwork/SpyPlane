@@ -38,18 +38,16 @@ WHERE system = ? AND faction = ?
 
 
 class FactionStatesRepository(BaseRepository):
-    async def replace_faction_states_for_system(
-        self, faction_states: list[dict]
-    ) -> None:
+    async def replace_faction_states_for_system(self, faction_states: list[dict]) -> None:
         if not faction_states:
             return
-        
+
         system = faction_states[0]["system"]
-        
+
         try:
             await self.begin()
             await self.db().execute(delete_all_faction_states_for_system, [system])
-            
+
             for state_data in faction_states:
                 await self.db().execute(
                     insert_faction_state,
@@ -62,16 +60,14 @@ class FactionStatesRepository(BaseRepository):
                         state_data.get("controlling", 0),
                     ],
                 )
-            
+
             await self.commit()
             log(f"Replaced {len(faction_states)} faction states for system: {system}")
-        except Exception as e:
+        except Exception:
             await self.rollback()
             raise
 
-    async def get_faction_state(
-        self, system: str, faction: str
-    ) -> tuple[str, str, str, str, float | None, int] | None:
+    async def get_faction_state(self, system: str, faction: str) -> tuple[str, str, str, str, float | None, int] | None:
         async with self.db().execute(select_faction_state, [system, faction]) as cur:
             row = await cur.fetchone()
             if row:
@@ -81,15 +77,11 @@ class FactionStatesRepository(BaseRepository):
     async def get_all_faction_states_for_system(
         self, system: str
     ) -> list[tuple[str, str, str, str, float | None, int]]:
-        async with self.db().execute(
-            select_all_faction_states_for_system, [system]
-        ) as cur:
+        async with self.db().execute(select_all_faction_states_for_system, [system]) as cur:
             rows = await cur.fetchall()
             return [(row[0], row[1], row[2], row[3], row[4], row[5]) for row in rows]
 
-    async def get_ptn_influence_warnings(
-        self
-    ) -> list[tuple[str, str, float, int]]:
+    async def get_ptn_influence_warnings(self) -> list[tuple[str, str, float, int]]:
         async with self.db().execute(select_ptn_influence_warnings) as cur:
             rows = await cur.fetchall()
             return [(row[0], row[1], row[2], row[3]) for row in rows]
@@ -100,7 +92,6 @@ class FactionStatesRepository(BaseRepository):
             await self.db().execute(delete_faction_state, [system, faction])
             await self.commit()
             log(f"Deleted faction state: {system} - {faction}")
-        except Exception as e:
+        except Exception:
             await self.rollback()
             raise
-

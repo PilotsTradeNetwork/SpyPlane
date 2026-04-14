@@ -92,13 +92,9 @@ class SystemsRepository(BaseRepository):
         async with self.db().execute(query) as cur:
             rows = await cur.fetchall()
         # Handle different query result formats
-        if (
-            len(rows) > 0 and len(rows[0]) == 4
-        ):  # scout_systems table (system_name, priority, added_by, added_at)
+        if len(rows) > 0 and len(rows[0]) == 4:  # scout_systems table (system_name, priority, added_by, added_at)
             return [ScoutSystem(row[0], row[1], row[2], row[3]) for row in rows]
-        elif (
-            len(rows) > 0 and len(rows[0]) == 2
-        ):  # scout_systems_posted table (system_name, priority)
+        elif len(rows) > 0 and len(rows[0]) == 2:  # scout_systems_posted table (system_name, priority)
             return [ScoutSystem(row[0], row[1], "posted", 0) for row in rows]
         else:
             return []
@@ -108,7 +104,7 @@ class SystemsRepository(BaseRepository):
     ):
         """
         Write systems to scout_systems_posted table with optional message IDs
-        
+
         Args:
             systems_to_scout: List of ScoutSystem objects to write
             message_ids: Optional dict mapping system_name to message_id
@@ -141,8 +137,7 @@ class SystemsRepository(BaseRepository):
         await self.begin()
         await self.purge_scout_systems()
         array_of_tuples = [
-            (system.system, system.priority, system.added_by, system.added_at)
-            for system in systems_to_write
+            (system.system, system.priority, system.added_by, system.added_at) for system in systems_to_write
         ]
         await self.db().executemany(insert_scout_system, array_of_tuples)
         await self.commit()
@@ -171,9 +166,7 @@ class SystemsRepository(BaseRepository):
     async def remove_system(self, system_name: str) -> bool:
         """Remove a system from tracking. Returns True if removed, False if not found."""
         try:
-            cursor = await self.db().execute(
-                "DELETE FROM scout_systems WHERE system_name = ?", [system_name]
-            )
+            cursor = await self.db().execute("DELETE FROM scout_systems WHERE system_name = ?", [system_name])
             await self.commit()
 
             if cursor.rowcount > 0:
@@ -206,9 +199,7 @@ class SystemsRepository(BaseRepository):
         _scout_cache.load(systems)
         log(f"Reloaded {len(systems)} scout systems into cache")
 
-    async def bulk_add_systems(
-        self, systems_data: list[tuple[str, str, str]]
-    ) -> tuple[int, int]:
+    async def bulk_add_systems(self, systems_data: list[tuple[str, str, str]]) -> tuple[int, int]:
         """
         Bulk add systems to tracking
         Args:

@@ -1,9 +1,7 @@
 """Bot registry to avoid circular import issues"""
 
-from typing import Optional
-
 # Type hint for the bot
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from ptn.spyplane.spy_plane import SpyPlane
@@ -22,4 +20,3 @@ def get_bot() -> "SpyPlane":
     if _bot_instance is None:
         raise RuntimeError("Bot not registered yet. Call register_bot() first.")
     return _bot_instance
-

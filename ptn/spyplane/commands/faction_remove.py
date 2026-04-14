@@ -8,9 +8,7 @@ bot = get_bot()
 
 
 @bot.tree.command(name="faction_remove")
-@app_commands.describe(
-    system_names="Comma-separated list of system names to remove from tracking (max 10 systems)"
-)
+@app_commands.describe(system_names="Comma-separated list of system names to remove from tracking (max 10 systems)")
 async def faction_remove(interaction: Interaction, system_names: str):
     """Remove systems from faction scouting tracking (single or multiple systems)"""
     await interaction.response.defer()
@@ -26,9 +24,7 @@ async def faction_remove(interaction: Interaction, system_names: str):
             return
 
         if len(system_list) > 10:
-            await interaction.followup.send(
-                "❌ Maximum 10 systems allowed per command."
-            )
+            await interaction.followup.send("❌ Maximum 10 systems allowed per command.")
             return
 
         # Bulk remove systems
@@ -45,4 +41,3 @@ async def faction_remove(interaction: Interaction, system_names: str):
     except Exception as e:
         log(f"Error processing system names: {e}")
         await interaction.followup.send("❌ Error processing system names.")
-
