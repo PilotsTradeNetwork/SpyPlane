@@ -48,10 +48,7 @@ class ScoutHistoryRepository(BaseRepository):
             params.append(userid)
         async with self.db().execute(query, parameters=params) as cur:
             rows = await cur.fetchall()
-            return [
-                ScoutHistory(r[0], r[1], r[2], r[3], datetime.fromtimestamp(r[4], timezone.utc))
-                for r in rows
-            ]
+            return [ScoutHistory(r[0], r[1], r[2], r[3], datetime.fromtimestamp(r[4], timezone.utc)) for r in rows]
 
     async def purge_scout_systems_history(self) -> None:
         await self.db().execute(purge_scout_history)

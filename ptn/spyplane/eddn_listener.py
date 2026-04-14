@@ -1,11 +1,10 @@
-import logging
+import contextlib
 import os
 import sys
 import threading
 import time
 import zlib
 from pathlib import Path
-from typing import Optional
 
 import simplejson
 import zmq
@@ -21,7 +20,7 @@ from ptn.spyplane.services.scout_recording_service import ScoutRecordingService
 class EddnListenerThread(threading.Thread):
     """Thread that listens to EDDN stream and dumps events to a file"""
 
-    def __init__(self, dump_file: Optional[Path] = None):
+    def __init__(self, dump_file: Path | None = None):
         threading.Thread.__init__(self)
         self.name = "EDDN Listener"
         self.eddn_url = EDDN_URL
@@ -31,7 +30,7 @@ class EddnListenerThread(threading.Thread):
         self.subscriber.setsockopt(zmq.RCVTIMEO, 600000)  # 10 minute timeout
         self.continue_listening = True
         self.dump_file_path = dump_file or Path("./workspace/eddn_events.jsonl")
-        self.dump_file: Optional[object] = None
+        self.dump_file: object | None = None
         # Check if EDDN_DUMP environment variable is set to "True"
         self.should_dump = os.getenv("EDDN_DUMP", "false") == "True"
         self.journal_helper = JournalHelper()
@@ -71,7 +70,7 @@ class EddnListenerThread(threading.Thread):
                     if self.journal_helper.is_target_event(json_data):
                         # Process the event: record scout and delete message
                         self._process_eddn_event(json_data)
-                    
+
                     # Dump all events to file if EDDN_DUMP is enabled
                     if self.should_dump and self.dump_file:
                         self.dump_file.write(simplejson.dumps(json_data) + "\n")
@@ -91,10 +90,8 @@ class EddnListenerThread(threading.Thread):
         """Handle connection errors by cleaning up and preparing for reconnection"""
         log_exception(error_context, error)
         sys.stdout.flush()
-        try:
+        with contextlib.suppress(Exception):
             self.subscriber.disconnect(self.eddn_url)
-        except Exception:
-            pass
         if self.dump_file:
             self.dump_file.close()
             self.dump_file = None
@@ -123,6 +120,7 @@ class EddnListenerThread(threading.Thread):
                     async def process_eddn_event_async():
                         await self._handle_eddn_scout(star_system)
                         await self._handle_faction_states(json_data)
+
                     bot.loop.create_task(process_eddn_event_async())
                 else:
                     log("Bot event loop not available for EDDN event processing")
@@ -174,7 +172,7 @@ class EddnListenerThread(threading.Thread):
 
 
 # Thread instance - created lazily to avoid circular imports
-_eddn_listener_thread: Optional[EddnListenerThread] = None
+_eddn_listener_thread: EddnListenerThread | None = None
 
 
 def get_eddn_listener_thread() -> EddnListenerThread:
@@ -183,4 +181,3 @@ def get_eddn_listener_thread() -> EddnListenerThread:
     if _eddn_listener_thread is None:
         _eddn_listener_thread = EddnListenerThread()
     return _eddn_listener_thread
-

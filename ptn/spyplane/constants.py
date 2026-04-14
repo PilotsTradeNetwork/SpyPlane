@@ -1,9 +1,9 @@
-import logging
 import ast
+import logging
 import os
 import sys
 
-from dotenv import load_dotenv, find_dotenv
+from dotenv import find_dotenv, load_dotenv
 
 load_dotenv(find_dotenv())
 is_test = "unittest" in sys.modules
@@ -27,10 +27,10 @@ PROD_EMOJI_COURIER = 809221441915977728  # PTN Courier Emoji
 
 
 TEST_CHANNEL_BOTSPAM = 1183552513874591845  # PANTS bot spam channel
-TEST_CHANNEL_SCOUT = 878369147640234065 # PANTS faction scout channel
-TEST_CHANNEL_MONITORING = 1183552554798424145 # PANTS bgs monitoring channel
-TEST_BOT_DEV_CHANNEL = 1183552513874591845 # PANTS #spam
-TEST_GOALS_CHANNEL = 1314526416238546954 # PANTS discussion channel temporarily used for goals
+TEST_CHANNEL_SCOUT = 878369147640234065  # PANTS faction scout channel
+TEST_CHANNEL_MONITORING = 1183552554798424145  # PANTS bgs monitoring channel
+TEST_BOT_DEV_CHANNEL = 1183552513874591845  # PANTS #spam
+TEST_GOALS_CHANNEL = 1314526416238546954  # PANTS discussion channel temporarily used for goals
 
 # Zasz server overrides. uncomment if PANTS setup is totally pants!
 # TEST_CHANNEL_SCOUT = 985601752726396958 # Zasz faction scout channel
@@ -64,21 +64,9 @@ GOALS_CHANNEL = PROD_GOALS_CHANNEL if flag_production else TEST_GOALS_CHANNEL
 EMOJI_PARTNERSHIP = PROD_EMOJI_PARTNERSHIP if flag_production else TEST_EMOJI_PARTNERSHIP
 EMOJI_COURIER = PROD_EMOJI_COURIER if flag_production else TEST_EMOJI_COURIER
 
-TOKEN = (
-    os.getenv("SPYPLANE_DISCORD_TOKEN_PROD")
-    if flag_production
-    else os.getenv("SPYPLANE_DISCORD_TOKEN_TESTING")
-)
-APPLICATION_ID = (
-    os.getenv("APPLICATION_ID_PROD")
-    if flag_production
-    else os.getenv("APPLICATION_ID_TESTING")
-)
-GUILD_ID = (
-    os.getenv("PROD_DISCORD_GUILD")
-    if flag_production
-    else os.getenv("TEST_DISCORD_GUILD")
-)
+TOKEN = os.getenv("SPYPLANE_DISCORD_TOKEN_PROD") if flag_production else os.getenv("SPYPLANE_DISCORD_TOKEN_TESTING")
+APPLICATION_ID = os.getenv("APPLICATION_ID_PROD") if flag_production else os.getenv("APPLICATION_ID_TESTING")
+GUILD_ID = os.getenv("PROD_DISCORD_GUILD") if flag_production else os.getenv("TEST_DISCORD_GUILD")
 DB_PATH = "./tests/test_workspace/spyplane.db" if is_test else "./workspace/spyplane.db"
 
 # Change to proxy URL when PTN proxy is ready
@@ -101,19 +89,19 @@ def log(msg):
 
 def log_exception(context: str, e: Exception):
     """Log an exception with context"""
-    logger.error(f"Exception in {context}: {str(e)}", exc_info=True)
+    logger.error(f"Exception in {context}: {e!s}")
 
 
 # random gifs and images
 hello_gifs = [
-    'https://media.tenor.com/Bym53MFSVSkAAAAd/hey-hey-you-guys.gif',  # hey guys
-    'https://media.tenor.com/PXiv8TqI28sAAAAC/tf2-team-fortress-2.gif',  # tf2 team fortress 2
-    'https://media.tenor.com/2wftvmdVxyMAAAAC/hey-whats-up.gif',
-    'https://media.tenor.com/qXf69taYAMwAAAAC/hi-mr-bean.gif',
-    'https://media.tenor.com/8ga0KY2xMhAAAAAC/hafnium.gif',
-    'https://media.tenor.com/xtFDWXk46GIAAAAd/tf2-spy.gif',  # tf2 spy
-    'https://media.tenor.com/UYvghSt8FjMAAAAC/bond-spectre.gif',  # bond spectre
-    'https://media.tenor.com/NdOG-1VFaiIAAAAC/kingsman-tux.gif',  # kingsman tux
+    "https://media.tenor.com/Bym53MFSVSkAAAAd/hey-hey-you-guys.gif",  # hey guys
+    "https://media.tenor.com/PXiv8TqI28sAAAAC/tf2-team-fortress-2.gif",  # tf2 team fortress 2
+    "https://media.tenor.com/2wftvmdVxyMAAAAC/hey-whats-up.gif",
+    "https://media.tenor.com/qXf69taYAMwAAAAC/hi-mr-bean.gif",
+    "https://media.tenor.com/8ga0KY2xMhAAAAAC/hafnium.gif",
+    "https://media.tenor.com/xtFDWXk46GIAAAAd/tf2-spy.gif",  # tf2 spy
+    "https://media.tenor.com/UYvghSt8FjMAAAAC/bond-spectre.gif",  # bond spectre
+    "https://media.tenor.com/NdOG-1VFaiIAAAAC/kingsman-tux.gif",  # kingsman tux
 ]
 
 error_gifs = [
@@ -122,5 +110,5 @@ error_gifs = [
     "https://media.tenor.com/oSASxe-6GesAAAAC/spongebob-patrick.gif",  # spongebob
     "https://media.tenor.com/u-1jz7ttHhEAAAAC/angry-panda-rage.gif",  # panda smash
     "https://media.tenor.com/kgsVoZcNACsAAAAC/not-my-problem-dont-care-didnt-ask.gif",
-    "https://media.tenor.com/jJl0gYeP-8QAAAAd/johnny-english-rowan-atkinson.gif"
+    "https://media.tenor.com/jJl0gYeP-8QAAAAd/johnny-english-rowan-atkinson.gif",
 ]

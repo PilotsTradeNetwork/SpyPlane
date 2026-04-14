@@ -22,7 +22,7 @@ class ScoutSystemsCache:
         """Get all cached systems"""
         return list(self._systems.values())
 
-    def get(self, system_name: str) -> Optional[ScoutSystem]:
+    def get(self, system_name: str) -> ScoutSystem | None:
         """Get a system by name"""
         return self._systems.get(system_name)
 
@@ -39,9 +39,7 @@ class ScoutSystemsCache:
 
     def remove_by_priority(self, priority: str) -> int:
         """Remove all systems of a specific priority. Returns count removed."""
-        to_remove = [
-            name for name, system in self._systems.items() if system.priority == priority
-        ]
+        to_remove = [name for name, system in self._systems.items() if system.priority == priority]
         for name in to_remove:
             del self._systems[name]
         return len(to_remove)
@@ -53,4 +51,3 @@ class ScoutSystemsCache:
     def count(self) -> int:
         """Get count of cached systems"""
         return len(self._systems)
-

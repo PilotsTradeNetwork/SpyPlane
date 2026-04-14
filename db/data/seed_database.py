@@ -5,8 +5,8 @@ Script to seed the database with test data from test_data.csv
 
 import csv
 import sqlite3
-import time
 import subprocess
+import time
 from pathlib import Path
 
 
@@ -46,9 +46,7 @@ def extract_csv_if_needed():
         return True
 
     except FileNotFoundError:
-        print(
-            "Error: 7zip not found. Please install 7zip to use compressed data files."
-        )
+        print("Error: 7zip not found. Please install 7zip to use compressed data files.")
         return False
     except Exception as e:
         print(f"Error during extraction: {e}")
@@ -106,24 +104,18 @@ def seed_database():
                     elif priority_num == 3:
                         priority_text = "Tertiary"
                     else:
-                        print(
-                            f"Warning: Unknown priority {priority_num} for system {system_name}"
-                        )
+                        print(f"Warning: Unknown priority {priority_num} for system {system_name}")
                         continue
 
                     # Add to systems table (if not already exists)
                     systems_to_insert.append((system_name,))
 
                     # Add to scout_systems table
-                    scout_systems_to_insert.append(
-                        (system_name, priority_text, "seed_script", current_time)
-                    )
+                    scout_systems_to_insert.append((system_name, priority_text, "seed_script", current_time))
 
         # Insert systems into systems table
         print("Inserting systems into systems table...")
-        cursor.executemany(
-            "INSERT OR IGNORE INTO systems (name) VALUES (?)", systems_to_insert
-        )
+        cursor.executemany("INSERT OR IGNORE INTO systems (name) VALUES (?)", systems_to_insert)
 
         # Insert scout systems
         print("Inserting scout systems...")

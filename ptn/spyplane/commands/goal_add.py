@@ -3,8 +3,8 @@ from discord import Interaction
 from discord.ui import Select, View
 
 from ptn.spyplane.bot_registry import get_bot
+from ptn.spyplane.commands.goal_add_modals import AddCustomGoalModal, AddGoalModal
 from ptn.spyplane.constants import log
-from ptn.spyplane.commands.goal_add_modals import AddGoalModal, AddCustomGoalModal
 
 bot = get_bot()
 
@@ -12,7 +12,7 @@ bot = get_bot()
 class GoalKindSelectView(View):
     def __init__(self):
         super().__init__(timeout=300)  # 5 minute timeout
-    
+
     @discord.ui.select(
         placeholder="Choose a goal kind...",
         options=[
@@ -21,14 +21,11 @@ class GoalKindSelectView(View):
             discord.SelectOption(label="Win War", value="WinWar", description="Win the War"),
             discord.SelectOption(label="Win Civil War", value="WinCivilWar", description="Win the Civil War"),
             discord.SelectOption(label="Custom", value="Custom", description="Custom multiline text goal"),
-        ]
+        ],
     )
     async def select_goalkind(self, interaction: Interaction, select: Select):
         goalkind = select.values[0]
-        if goalkind == "Custom":
-            modal = AddCustomGoalModal()
-        else:
-            modal = AddGoalModal(goalkind=goalkind)
+        modal = AddCustomGoalModal() if goalkind == "Custom" else AddGoalModal(goalkind=goalkind)
         await interaction.response.send_modal(modal)
 
 
@@ -37,15 +34,7 @@ async def goal_add(interaction: Interaction):
     """Add a new faction goal to the goals list"""
     try:
         view = GoalKindSelectView()
-        await interaction.response.send_message(
-            "Select a goal kind:",
-            view=view,
-            ephemeral=True
-        )
+        await interaction.response.send_message("Select a goal kind:", view=view, ephemeral=True)
     except Exception as e:
         log(f"Error opening add goal modal: {e}")
-        await interaction.response.send_message(
-            f"❌ Error opening goal editor: {str(e)}",
-            ephemeral=True
-        )
-
+        await interaction.response.send_message(f"❌ Error opening goal editor: {e!s}", ephemeral=True)

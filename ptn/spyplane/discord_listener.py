@@ -2,21 +2,21 @@ import asyncio
 import os
 import random
 
-from discord import Embed, RawReactionActionEvent, Message, Interaction, app_commands
+from discord import Embed, Interaction, Message, RawReactionActionEvent, app_commands
 from discord.app_commands import AppCommandError
 
 from ptn.spyplane._metadata import __version__
+from ptn.spyplane.bot_registry import get_bot
 from ptn.spyplane.constants import (
     BOT_DEV_CHANNEL,
-    CHANNEL_SCOUT,
     CHANNEL_MONITORING,
+    CHANNEL_SCOUT,
     EMOJI_TARGET,
     error_gifs,
     hello_gifs,
     log,
     log_exception,
 )
-from ptn.spyplane.bot_registry import get_bot
 from ptn.spyplane.database.systems_repository import SystemsRepository
 from ptn.spyplane.eddn_listener import get_eddn_listener_thread
 from ptn.spyplane.services.post_after_tick_service import PostAfterTickService
@@ -45,18 +45,18 @@ bot = get_bot()
 async def on_ready():
     try:
         log(f"{bot.user.name} has connected to Discord server. Version: {__version__}")
-        
+
         # Send hello gif to bot dev channel
         botdev_channel = bot.get_channel(BOT_DEV_CHANNEL)
         if botdev_channel:
             embed = Embed(
                 title="SPY PLANE ONLINE",
                 description=f"<@{bot.user.id}> connected, version **{__version__}**.",
-                color=0x00FF00  # Green color
+                color=0x00FF00,  # Green color
             )
             embed.set_image(url=random.choice(hello_gifs))
             await botdev_channel.send(embed=embed)
-        
+
         # Set bot.channel to dev channel for reaction handler
         dev_channel = bot.get_channel(CHANNEL_SCOUT)
         bot.channel = dev_channel
@@ -124,10 +124,7 @@ async def on_message(message: Message):
             return
 
         # Don't send the gif if a command is detected (even by someone who has no access)
-        if (
-            len(msg_split) >= 2
-            and msg_split[1].lower() in TXT_COMMANDS
-        ):
+        if len(msg_split) >= 2 and msg_split[1].lower() in TXT_COMMANDS:
             # Process commands normally
             await bot.process_commands(message)
             return
@@ -160,13 +157,9 @@ async def on_raw_reaction_add(payload: RawReactionActionEvent):
             return
         message: Message = await bot.channel.fetch_message(payload.message_id)
         asyncio.create_task(
-            record_service.record_reaction(
-                message.content, payload.member.name, payload.member.id
-            )
+            record_service.record_reaction(message.content, payload.member.name, payload.member.id)
         )  # Another option is to try a Queue
-        if (
-            not message.pinned
-        ):  # prevent deleting pinned messages with reactions in the channel
+        if not message.pinned:  # prevent deleting pinned messages with reactions in the channel
             await message.delete()
     except Exception as e:
         log_exception("on_raw_reaction_add", e)
@@ -176,50 +169,42 @@ async def on_raw_reaction_add(payload: RawReactionActionEvent):
 async def on_app_command_error(interaction: Interaction, error: AppCommandError):
     """Global error handler for app commands (slash commands)"""
     gif = random.choice(error_gifs)
-    
+
     try:
-        log(f"Error from {interaction.command.name if interaction.command else 'unknown'} in {interaction.channel.name if interaction.channel else 'unknown'} called by {interaction.user.display_name}: {error}")
-        
-        if isinstance(error, app_commands.MissingPermissions):
+        log(
+            f"Error from {interaction.command.name if interaction.command else 'unknown'} in {interaction.channel.name if interaction.channel else 'unknown'} called by {interaction.user.display_name}: {error}"
+        )
+
+        if isinstance(error, (app_commands.MissingPermissions, app_commands.CheckFailure)):
             embed = Embed(
                 description="**Permission denied**: You don't have permission to use this command.",
-                color=0xFF0000  # Red color
+                color=0xFF0000,  # Red color
             )
             try:
                 await interaction.response.send_message(embed=embed, ephemeral=True)
             except:
                 await interaction.followup.send(embed=embed, ephemeral=True)
-        
-        elif isinstance(error, app_commands.CheckFailure):
-            embed = Embed(
-                description="**Permission denied**: You don't have permission to use this command.",
-                color=0xFF0000  # Red color
-            )
-            try:
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-            except:
-                await interaction.followup.send(embed=embed, ephemeral=True)
-        
+
         elif isinstance(error, app_commands.CommandOnCooldown):
             embed = Embed(
                 description=f"**Command on cooldown**: Please try again in {error.retry_after:.2f} seconds.",
-                color=0xFF0000  # Red color
+                color=0xFF0000,  # Red color
             )
             try:
                 await interaction.response.send_message(embed=embed, ephemeral=True)
             except:
                 await interaction.followup.send(embed=embed, ephemeral=True)
-        
+
         else:
             # Generic error - send gif and error message
             try:
                 await interaction.response.send_message(gif, ephemeral=True)
             except:
                 await interaction.followup.send(gif, ephemeral=True)
-            
+
             embed = Embed(
                 description=f"Sorry, that didn't work: {error}",
-                color=0xFF0000  # Red color
+                color=0xFF0000,  # Red color
             )
             try:
                 await interaction.followup.send(embed=embed, ephemeral=True)
@@ -227,7 +212,7 @@ async def on_app_command_error(interaction: Interaction, error: AppCommandError)
                 # If followup also fails, try sending to channel
                 if interaction.channel:
                     await interaction.channel.send(embed=embed)
-    
+
     except Exception as e:
         log_exception("on_app_command_error", e)
         # Last resort - try to send something
@@ -236,4 +221,3 @@ async def on_app_command_error(interaction: Interaction, error: AppCommandError)
                 await interaction.response.send_message(gif, ephemeral=True)
         except:
             pass
-

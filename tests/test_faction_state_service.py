@@ -1,5 +1,5 @@
 from unittest import IsolatedAsyncioTestCase
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 from ptn.spyplane.services.faction_state_service import FactionStateService
 
@@ -42,9 +42,9 @@ class FactionStateServiceTests(IsolatedAsyncioTestCase):
                         "Name": "TestFaction",
                         "ActiveStates": [{"State": "Boom"}],
                         "PendingStates": [{"State": "Expansion"}],
-                        "Influence": 0.5
+                        "Influence": 0.5,
                     }
-                ]
+                ],
             }
         }
         result = self.service.extract_faction_states_from_event(event)
@@ -62,19 +62,9 @@ class FactionStateServiceTests(IsolatedAsyncioTestCase):
                 "StarSystem": "TestSystem",
                 "SystemFaction": {"Name": "Faction1"},
                 "Factions": [
-                    {
-                        "Name": "Faction1",
-                        "ActiveStates": [{"State": "Boom"}],
-                        "PendingStates": [],
-                        "Influence": 0.6
-                    },
-                    {
-                        "Name": "Faction2",
-                        "ActiveStates": [],
-                        "PendingStates": [{"State": "War"}],
-                        "Influence": 0.4
-                    }
-                ]
+                    {"Name": "Faction1", "ActiveStates": [{"State": "Boom"}], "PendingStates": [], "Influence": 0.6},
+                    {"Name": "Faction2", "ActiveStates": [], "PendingStates": [{"State": "War"}], "Influence": 0.4},
+                ],
             }
         }
         result = self.service.extract_faction_states_from_event(event)
@@ -98,9 +88,9 @@ class FactionStateServiceTests(IsolatedAsyncioTestCase):
                     {
                         "Name": "TestFaction",
                         "ActiveStates": [{"State": "Boom"}, {"State": "Expansion"}],
-                        "PendingStates": []
+                        "PendingStates": [],
                     }
-                ]
+                ],
             }
         }
         result = self.service.extract_faction_states_from_event(event)
@@ -110,13 +100,7 @@ class FactionStateServiceTests(IsolatedAsyncioTestCase):
         event = {
             "message": {
                 "StarSystem": "TestSystem",
-                "Factions": [
-                    {
-                        "Name": "TestFaction",
-                        "ActiveStates": [],
-                        "PendingStates": []
-                    }
-                ]
+                "Factions": [{"Name": "TestFaction", "ActiveStates": [], "PendingStates": []}],
             }
         }
         result = self.service.extract_faction_states_from_event(event)
@@ -125,35 +109,17 @@ class FactionStateServiceTests(IsolatedAsyncioTestCase):
         self.assertEqual(result[0]["pending_csv"], "")
 
     def test_extract_faction_states_from_event_missing_starsystem(self):
-        event = {
-            "message": {
-                "Factions": [
-                    {
-                        "Name": "TestFaction",
-                        "ActiveStates": [{"State": "Boom"}]
-                    }
-                ]
-            }
-        }
+        event = {"message": {"Factions": [{"Name": "TestFaction", "ActiveStates": [{"State": "Boom"}]}]}}
         result = self.service.extract_faction_states_from_event(event)
         self.assertEqual(result, [])
 
     def test_extract_faction_states_from_event_missing_factions(self):
-        event = {
-            "message": {
-                "StarSystem": "TestSystem"
-            }
-        }
+        event = {"message": {"StarSystem": "TestSystem"}}
         result = self.service.extract_faction_states_from_event(event)
         self.assertEqual(result, [])
 
     def test_extract_faction_states_from_event_empty_factions(self):
-        event = {
-            "message": {
-                "StarSystem": "TestSystem",
-                "Factions": []
-            }
-        }
+        event = {"message": {"StarSystem": "TestSystem", "Factions": []}}
         result = self.service.extract_faction_states_from_event(event)
         self.assertEqual(result, [])
 
@@ -162,14 +128,9 @@ class FactionStateServiceTests(IsolatedAsyncioTestCase):
             "message": {
                 "StarSystem": "TestSystem",
                 "Factions": [
-                    {
-                        "ActiveStates": [{"State": "Boom"}]
-                    },
-                    {
-                        "Name": "ValidFaction",
-                        "ActiveStates": [{"State": "Expansion"}]
-                    }
-                ]
+                    {"ActiveStates": [{"State": "Boom"}]},
+                    {"Name": "ValidFaction", "ActiveStates": [{"State": "Expansion"}]},
+                ],
             }
         }
         result = self.service.extract_faction_states_from_event(event)
@@ -196,17 +157,17 @@ class FactionStateServiceTests(IsolatedAsyncioTestCase):
                         "Name": "TestFaction",
                         "ActiveStates": [{"State": "Boom"}],
                         "PendingStates": [{"State": "Expansion"}],
-                        "Influence": 0.5
+                        "Influence": 0.5,
                     }
-                ]
+                ],
             }
         }
-        
+
         mock_repo = AsyncMock()
         service = FactionStateService(repo=mock_repo)
-        
+
         await service.replace_faction_states_from_event(event)
-        
+
         mock_repo.replace_faction_states_for_system.assert_called_once()
         call_args = mock_repo.replace_faction_states_for_system.call_args[0][0]
         self.assertEqual(len(call_args), 1)
@@ -223,27 +184,17 @@ class FactionStateServiceTests(IsolatedAsyncioTestCase):
                 "StarSystem": "TestSystem",
                 "SystemFaction": {"Name": "Faction1"},
                 "Factions": [
-                    {
-                        "Name": "Faction1",
-                        "ActiveStates": [{"State": "Boom"}],
-                        "PendingStates": [],
-                        "Influence": 0.6
-                    },
-                    {
-                        "Name": "Faction2",
-                        "ActiveStates": [],
-                        "PendingStates": [{"State": "War"}],
-                        "Influence": 0.4
-                    }
-                ]
+                    {"Name": "Faction1", "ActiveStates": [{"State": "Boom"}], "PendingStates": [], "Influence": 0.6},
+                    {"Name": "Faction2", "ActiveStates": [], "PendingStates": [{"State": "War"}], "Influence": 0.4},
+                ],
             }
         }
-        
+
         mock_repo = AsyncMock()
         service = FactionStateService(repo=mock_repo)
-        
+
         await service.replace_faction_states_from_event(event)
-        
+
         mock_repo.replace_faction_states_for_system.assert_called_once()
         call_args = mock_repo.replace_faction_states_for_system.call_args[0][0]
         self.assertEqual(len(call_args), 2)
@@ -251,18 +202,13 @@ class FactionStateServiceTests(IsolatedAsyncioTestCase):
         self.assertEqual(call_args[1]["faction"], "Faction2")
 
     async def test_replace_faction_states_from_event_empty_result(self):
-        event = {
-            "message": {
-                "StarSystem": "TestSystem",
-                "Factions": []
-            }
-        }
-        
+        event = {"message": {"StarSystem": "TestSystem", "Factions": []}}
+
         mock_repo = AsyncMock()
         service = FactionStateService(repo=mock_repo)
-        
+
         await service.replace_faction_states_from_event(event)
-        
+
         mock_repo.replace_faction_states_for_system.assert_not_called()
 
     async def test_replace_faction_states_from_event_repository_error(self):
@@ -270,22 +216,15 @@ class FactionStateServiceTests(IsolatedAsyncioTestCase):
             "message": {
                 "StarSystem": "TestSystem",
                 "SystemFaction": {"Name": "TestFaction"},
-                "Factions": [
-                    {
-                        "Name": "TestFaction",
-                        "ActiveStates": [{"State": "Boom"}],
-                        "Influence": 0.5
-                    }
-                ]
+                "Factions": [{"Name": "TestFaction", "ActiveStates": [{"State": "Boom"}], "Influence": 0.5}],
             }
         }
-        
+
         mock_repo = AsyncMock()
         mock_repo.replace_faction_states_for_system.side_effect = Exception("Database error")
         service = FactionStateService(repo=mock_repo)
-        
+
         # Should not raise, but log the error
         await service.replace_faction_states_from_event(event)
-        
-        mock_repo.replace_faction_states_for_system.assert_called_once()
 
+        mock_repo.replace_faction_states_for_system.assert_called_once()

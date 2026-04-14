@@ -39,16 +39,20 @@ class FactionGoalsRepository(BaseRepository):
         self.config_repo = config_repo or ConfigRepository()
 
     async def add_goal(
-        self, index: int, system: str, faction_one: str, faction_other: str, goalkind: str, additional_note: str | None = None
+        self,
+        index: int,
+        system: str,
+        faction_one: str,
+        faction_other: str,
+        goalkind: str,
+        additional_note: str | None = None,
     ) -> None:
         try:
             await self.begin()
-            await self.db().execute(
-                insert_goal, [index, system, faction_one, faction_other, goalkind, additional_note]
-            )
+            await self.db().execute(insert_goal, [index, system, faction_one, faction_other, goalkind, additional_note])
             await self.commit()
             log(f"Added faction goal: index={index}, system={system}, goalkind={goalkind}")
-        except Exception as e:
+        except Exception:
             await self.rollback()
             raise
 
@@ -61,7 +65,7 @@ class FactionGoalsRepository(BaseRepository):
             if deleted:
                 log(f"Removed faction goal: index={index}")
             return deleted
-        except Exception as e:
+        except Exception:
             await self.rollback()
             raise
 
@@ -75,7 +79,7 @@ class FactionGoalsRepository(BaseRepository):
             if count > 0:
                 log(f"Removed all {count} faction goals")
             return count
-        except Exception as e:
+        except Exception:
             await self.rollback()
             raise
 
@@ -86,9 +90,7 @@ class FactionGoalsRepository(BaseRepository):
             rows = await cur.fetchall()
             return [(row[0], row[1], row[2], row[3], row[4], row[5]) for row in rows]
 
-    async def get_goal_by_index(
-        self, index: int
-    ) -> tuple[int, str, str, str, str, str | None] | None:
+    async def get_goal_by_index(self, index: int) -> tuple[int, str, str, str, str, str | None] | None:
         async with self.db().execute(select_goal_by_index, [index]) as cur:
             row = await cur.fetchone()
             if row:
@@ -112,28 +114,28 @@ class FactionGoalsRepository(BaseRepository):
     async def set_message_id(self, message_id: int | None) -> None:
         value = str(message_id) if message_id else ""
         timestamp = int(time.mktime(datetime.now(timezone.utc).timetuple()))
-        
+
         # Check if config exists, then update or insert
         check_config = """
         SELECT id FROM configuration WHERE name = ?
         """
-        
+
         insert_config = """
         INSERT INTO configuration (name, value, timestamp)
         VALUES (?, ?, ?)
         """
-        
+
         update_config = """
         UPDATE configuration
         SET value=?, timestamp=?
         WHERE name=?
         """
-        
+
         try:
             await self.begin()
             async with self.db().execute(check_config, ["faction_goals_message_id"]) as cur:
                 row = await cur.fetchone()
-            
+
             if row:
                 # Config exists, update it
                 await self.db().execute(
@@ -147,7 +149,6 @@ class FactionGoalsRepository(BaseRepository):
                     ["faction_goals_message_id", value, timestamp],
                 )
             await self.commit()
-        except Exception as e:
+        except Exception:
             await self.rollback()
             raise
-

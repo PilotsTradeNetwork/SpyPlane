@@ -31,9 +31,7 @@ class PostAfterTickService:
         log("Posting systems now")
         await self.systems.publish_systems_to_scout()
 
-    async def run_after_interval(
-        self, pre_launch_message: bool, interval_config_key: str, method_to_run
-    ):
+    async def run_after_interval(self, pre_launch_message: bool, interval_config_key: str, method_to_run):
         try:
             hours = await ConfigRepository().get_config(interval_config_key)
             message = f"Tick detected. Spy Plane will take off in ~ {hours.value} hours"
@@ -55,9 +53,5 @@ class PostAfterTickService:
             self.on_tick()
 
     def on_tick(self):
-        asyncio.create_task(
-            self.run_after_interval(True, "interval_hours", self.post_systems)
-        )
-        asyncio.create_task(
-            self.run_after_interval(False, "daily_interval_hours", self.post_report)
-        )
+        asyncio.create_task(self.run_after_interval(True, "interval_hours", self.post_systems))
+        asyncio.create_task(self.run_after_interval(False, "daily_interval_hours", self.post_report))

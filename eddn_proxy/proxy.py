@@ -1,5 +1,6 @@
 import zmq
 
+
 def run_proxy():
     context = zmq.Context()
 
@@ -10,11 +11,12 @@ def run_proxy():
     # 2. Backend: Binds to a local interface for your apps
     backend = context.socket(zmq.XPUB)
     # Using IPC is faster for local apps than TCP
-    backend.bind("ipc:///tmp/eddn") 
+    backend.bind("ipc:///tmp/eddn")
 
     # 3. Start the proxy (Built-in ZMQ device)
     # This blocks and automatically shuttles data between sockets
     zmq.proxy(frontend, backend)
+
 
 if __name__ == "__main__":
     run_proxy()

@@ -1,22 +1,43 @@
 """
 Commands package - imports all commands to register them with the bot
 """
+
 # Import all commands to register them
-from ptn.spyplane.commands import faction_launch
-from ptn.spyplane.commands import faction_config_dump
-from ptn.spyplane.commands import faction_config
-from ptn.spyplane.commands import faction_operations_report
-from ptn.spyplane.commands import faction_daily_report
-from ptn.spyplane.commands import faction_track
-from ptn.spyplane.commands import faction_remove
-from ptn.spyplane.commands import faction_removeall
-from ptn.spyplane.commands import faction_list
-from ptn.spyplane.commands import goal_add
-from ptn.spyplane.commands import goal_remove
-from ptn.spyplane.commands import goal_post
-from ptn.spyplane.commands import goal_embed
-from ptn.spyplane.commands import goal_list
-from ptn.spyplane.commands import ping
+from ptn.spyplane.commands import (
+    faction_config,
+    faction_config_dump,
+    faction_daily_report,
+    faction_launch,
+    faction_list,
+    faction_operations_report,
+    faction_remove,
+    faction_removeall,
+    faction_track,
+    goal_add,
+    goal_embed,
+    goal_list,
+    goal_post,
+    goal_remove,
+    ping,
+)
+
+__all__ = [
+    "faction_config",
+    "faction_config_dump",
+    "faction_daily_report",
+    "faction_launch",
+    "faction_list",
+    "faction_operations_report",
+    "faction_remove",
+    "faction_removeall",
+    "faction_track",
+    "goal_add",
+    "goal_embed",
+    "goal_list",
+    "goal_post",
+    "goal_remove",
+    "ping",
+]
 
 
 class Commands:
@@ -24,4 +45,3 @@ class Commands:
 
     def __init__(self):
         pass
-

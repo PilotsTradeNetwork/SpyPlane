@@ -15,4 +15,3 @@ async def faction_launch(interaction: Interaction):
     log(f"User {interaction.user.name} is posting the systems to scout: {__version__}.")
     await SystemsPostingService().publish_systems_to_scout()
     await interaction.followup.send("Spy plane is now on the prowl!")
-

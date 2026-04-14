@@ -14,4 +14,3 @@ async def faction_config_dump(interaction: Interaction):
     log(f"User {interaction.user.name} is dumping config: {__version__}.")
     embed = await ConfigService().dump_config_embed()
     await interaction.response.send_message(embed=embed)
-

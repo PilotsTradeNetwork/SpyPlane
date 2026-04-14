@@ -22,15 +22,9 @@ dirname = os.path.dirname(__file__)
 
 
 def mocked_requests_get(*args, **kwargs):
-    if (
-        args[0] == "https://elitebgs.app/api/ebgs/v5/systems"
-        and kwargs["params"]["name"] == "Wally Bei"
-    ):
+    if args[0] == "https://elitebgs.app/api/ebgs/v5/systems" and kwargs["params"]["name"] == "Wally Bei":
         return load_file_as_response("none_states_system")
-    if (
-        args[0] == "https://elitebgs.app/api/ebgs/v5/systems"
-        and kwargs["params"]["name"] == "Beatis"
-    ):
+    if args[0] == "https://elitebgs.app/api/ebgs/v5/systems" and kwargs["params"]["name"] == "Beatis":
         return load_file_as_response("interesting_states_system")
     return MockResponse(None, 404)
 

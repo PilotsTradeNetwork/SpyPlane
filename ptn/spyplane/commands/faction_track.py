@@ -35,9 +35,7 @@ async def faction_track(interaction: Interaction, system_names: str, priority: s
             return
 
         if len(system_list) > 10:
-            await interaction.followup.send(
-                "❌ Maximum 10 systems allowed per command."
-            )
+            await interaction.followup.send("❌ Maximum 10 systems allowed per command.")
             return
 
         # Validate all systems first
@@ -48,16 +46,11 @@ async def faction_track(interaction: Interaction, system_names: str, priority: s
                 invalid_systems.append(system_name)
 
         if invalid_systems:
-            await interaction.followup.send(
-                f"❌ Invalid systems found: {', '.join(invalid_systems)}"
-            )
+            await interaction.followup.send(f"❌ Invalid systems found: {', '.join(invalid_systems)}")
             return
 
         # Prepare systems data (all with same priority)
-        systems_data = [
-            (system_name, priority, interaction.user.name)
-            for system_name in system_list
-        ]
+        systems_data = [(system_name, priority, interaction.user.name) for system_name in system_list]
 
         # Bulk add systems
         successful, failed = await repo.bulk_add_systems(systems_data)
@@ -73,4 +66,3 @@ async def faction_track(interaction: Interaction, system_names: str, priority: s
     except Exception as e:
         log(f"Error processing system names: {e}")
         await interaction.followup.send("❌ Error processing system names.")
-
