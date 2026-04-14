@@ -51,7 +51,7 @@ class SpyPlane(Bot):
 
     async def close(self):
         # Stop EDDN listener thread
-        from ptn.spyplane.eddn_listener import get_eddn_listener_thread
+        from ptn.spyplane.eddn_listener import get_eddn_listener_thread  # noqa: PLC0415
 
         eddn_listener_thread = get_eddn_listener_thread()
         if eddn_listener_thread.is_alive():
@@ -85,8 +85,8 @@ def run():
     log("")
 
     # Import Commands and DiscordListener here to avoid circular import
-    from ptn.spyplane.commands import Commands
-    from ptn.spyplane.discord_listener import DiscordListener
+    from ptn.spyplane.commands import Commands  # noqa: PLC0415
+    from ptn.spyplane.discord_listener import DiscordListener  # noqa: PLC0415
 
     Commands()  # This imports all command modules to register them
     DiscordListener()  # This imports all event handlers to register them

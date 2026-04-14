@@ -24,7 +24,7 @@ class ScoutHistoryRepositoryTests(IsolatedAsyncioTestCase):
             ScoutSystem("Volowahku", "1", 3),
             "zaszrespawned",
             354990093980663889,
-            datetime.now(),
+            datetime.now(timezone.utc),
         )
         history: list[ScoutHistory] = await self.subject.get_history(username="zaszrespawned")
         for scout in history:

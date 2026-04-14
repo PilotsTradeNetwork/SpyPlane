@@ -5,14 +5,14 @@ from aiosqlite import Connection
 
 class BaseRepository:
     def db(self) -> Connection:
-        from ptn.spyplane.bot_registry import get_bot
+        from ptn.spyplane.bot_registry import get_bot  # noqa: PLC0415
 
         bot = get_bot()
         return bot.db
 
     @staticmethod
     async def begin():
-        from ptn.spyplane.bot_registry import get_bot
+        from ptn.spyplane.bot_registry import get_bot  # noqa: PLC0415
 
         bot = get_bot()
         try:
@@ -24,14 +24,14 @@ class BaseRepository:
 
     @staticmethod
     async def rollback():
-        from ptn.spyplane.bot_registry import get_bot
+        from ptn.spyplane.bot_registry import get_bot  # noqa: PLC0415
 
         bot = get_bot()
         await bot.db.execute("ROLLBACK")
 
     @staticmethod
     async def commit():
-        from ptn.spyplane.bot_registry import get_bot
+        from ptn.spyplane.bot_registry import get_bot  # noqa: PLC0415
 
         bot = get_bot()
         await bot.db.execute("COMMIT")

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ptn.spyplane.constants import log
 from ptn.spyplane.database.base_repository import BaseRepository
@@ -94,10 +94,9 @@ class SystemsRepository(BaseRepository):
         # Handle different query result formats
         if len(rows) > 0 and len(rows[0]) == 4:  # scout_systems table (system_name, priority, added_by, added_at)
             return [ScoutSystem(row[0], row[1], row[2], row[3]) for row in rows]
-        elif len(rows) > 0 and len(rows[0]) == 2:  # scout_systems_posted table (system_name, priority)
+        if len(rows) > 0 and len(rows[0]) == 2:  # scout_systems_posted table (system_name, priority)
             return [ScoutSystem(row[0], row[1], "posted", 0) for row in rows]
-        else:
-            return []
+        return []
 
     async def write_system_to_post(
         self, systems_to_scout: list[ScoutSystem], message_ids: dict[str, int] | None = None
@@ -147,7 +146,7 @@ class SystemsRepository(BaseRepository):
     async def add_system(self, system_name: str, priority: str, added_by: str) -> bool:
         """Add a system to track. Returns True if added, False if already exists."""
         try:
-            added_at = int(datetime.now().timestamp())
+            added_at = int(datetime.now(timezone.utc).timestamp())
             await self.db().execute(
                 insert_scout_system,
                 [system_name, priority, added_by, added_at],
@@ -211,14 +210,10 @@ class SystemsRepository(BaseRepository):
         failed = 0
 
         for system_name, priority, added_by in systems_data:
-            try:
-                success = await self.add_system(system_name, priority, added_by)
-                if success:
-                    successful += 1
-                else:
-                    failed += 1
-            except Exception as e:
-                log(f"Error adding system {system_name}: {e}")
+            success = await self.add_system(system_name, priority, added_by)
+            if success:
+                successful += 1
+            else:
                 failed += 1
 
         return successful, failed
@@ -235,14 +230,10 @@ class SystemsRepository(BaseRepository):
         failed = 0
 
         for system_name in system_names:
-            try:
-                success = await self.remove_system(system_name)
-                if success:
-                    successful += 1
-                else:
-                    failed += 1
-            except Exception as e:
-                log(f"Error removing system {system_name}: {e}")
+            success = await self.remove_system(system_name)
+            if success:
+                successful += 1
+            else:
                 failed += 1
 
         return successful, failed

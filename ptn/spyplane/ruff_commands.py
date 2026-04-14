@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3  # noqa: EXE001
 """
 Ruff command wrappers for the SpyPlane project.
 """
@@ -11,7 +11,7 @@ from pathlib import Path
 def run_ruff_command(args):
     """Run ruff with the given arguments."""
     try:
-        result = subprocess.run(["ruff", *args], cwd=Path.cwd())
+        result = subprocess.run(["ruff", *args], cwd=Path.cwd(), check=False)  # noqa: S603,S607
         sys.exit(result.returncode)
     except FileNotFoundError:
         print("Error: ruff not found. Please install it with: uv sync --extra dev")

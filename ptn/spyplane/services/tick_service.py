@@ -10,7 +10,8 @@ class TickService:
     def __init__(self, current_tick: int | None = None):
         self.current_tick: int = current_tick or asyncio.run(self.fetch_current_tick())
         log(f"Current Tick: {self.current_tick}")
-        assert self.current_tick
+        if not self.current_tick:
+            raise RuntimeError("Failed to fetch current tick on startup")
 
     def get_current_tick(self) -> datetime:
         return datetime.fromtimestamp(int(self.current_tick), timezone.utc)
@@ -18,7 +19,8 @@ class TickService:
     async def has_ticked(self) -> bool:
         try:
             new_tick = await self.fetch_current_tick()
-            assert new_tick
+            if not new_tick:
+                raise ValueError("fetch_current_tick returned empty value")
         except Exception as e:
             log(f"Error during has_ticked check: {e}")
             return False

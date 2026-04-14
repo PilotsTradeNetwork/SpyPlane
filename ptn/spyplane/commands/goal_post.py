@@ -11,7 +11,7 @@ from ptn.spyplane.database.faction_header_footer_repository import FactionHeader
 bot = get_bot()
 
 
-def render_goal_template(goalkind: str, system: str, faction_one: str, faction_other: str) -> str:
+def render_goal_template(goalkind: str, faction_one: str, faction_other: str) -> str:
     """Render a goal template based on goalkind, replacing placeholders with actual values"""
     # Custom goalkind just returns the custom text directly
     if goalkind == "Custom":
@@ -24,8 +24,7 @@ def render_goal_template(goalkind: str, system: str, faction_one: str, faction_o
         "WinCivilWar": f"Win the Civil war for __{faction_one}__. <:Assassin:{EMOJI_ASSASSIN}>",
     }
 
-    template = templates.get(goalkind, f"Unknown goal kind: {goalkind}")
-    return template
+    return templates.get(goalkind, f"Unknown goal kind: {goalkind}")
 
 
 @bot.tree.command(name="goal_post")
@@ -106,9 +105,7 @@ async def goal_post(interaction: discord.Interaction):
                 seen_systems.add(system)
 
         # Format goals as fields - one field per system
-        system_number = 0
-        for system in systems_ordered:
-            system_number += 1
+        for system_number, system in enumerate(systems_ordered, start=1):
             system_goals = systems_dict[system]
             system_url = f"https://inara.cz/elite/starsystem/?search={quote(system)}"
 
@@ -118,8 +115,8 @@ async def goal_post(interaction: discord.Interaction):
             if len(system_goals) > 1:
                 # Multiple goals - add a, b, c prefixes
                 for idx, goal in enumerate(system_goals):
-                    index, _, faction_one, faction_other, goalkind, additional_note = goal
-                    rendered_template = render_goal_template(goalkind, system, faction_one, faction_other)
+                    _index, _, faction_one, faction_other, goalkind, additional_note = goal
+                    rendered_template = render_goal_template(goalkind, faction_one, faction_other)
                     suffix = chr(ord("a") + idx)  # a, b, c, ...
                     field_value_parts.append(f"{suffix}. {rendered_template}")
                     if additional_note:
@@ -127,7 +124,7 @@ async def goal_post(interaction: discord.Interaction):
             else:
                 # Single goal - no prefix needed
                 _index, _, faction_one, faction_other, goalkind, additional_note = system_goals[0]
-                rendered_template = render_goal_template(goalkind, system, faction_one, faction_other)
+                rendered_template = render_goal_template(goalkind, faction_one, faction_other)
                 field_value_parts.append(rendered_template)
                 if additional_note:
                     field_value_parts.append(f"    {additional_note}")

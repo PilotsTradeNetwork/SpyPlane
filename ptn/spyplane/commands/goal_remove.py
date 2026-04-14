@@ -25,7 +25,7 @@ async def goal_remove(interaction: Interaction, index: int | None = None, remove
             if count > 0:
                 await interaction.followup.send(f"✅ Removed all {count} faction goal(s) from the database.")
             else:
-                await interaction.followup.send("ℹ️ No goals found to remove.")
+                await interaction.followup.send("No goals found to remove.")
             return
 
         # Remove specific goal by index

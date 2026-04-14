@@ -11,7 +11,7 @@ _bot_instance: Optional["SpyPlane"] = None
 
 def register_bot(bot_instance: "SpyPlane") -> None:
     """Register the bot instance"""
-    global _bot_instance
+    global _bot_instance  # noqa: PLW0603
     _bot_instance = bot_instance
 
 

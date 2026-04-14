@@ -32,7 +32,7 @@ async def faction_removeall(interaction: Interaction, priority: str):
                 f"✅ Removed all **{priority}** systems from tracking ({deleted_count} systems deleted)"
             )
         else:
-            await interaction.followup.send(f"ℹ️ No **{priority}** systems found in tracking")
+            await interaction.followup.send(f"No **{priority}** systems found in tracking")
 
     except Exception as e:
         log(f"Error removing all {priority} systems: {e}")

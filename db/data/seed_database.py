@@ -27,11 +27,12 @@ def extract_csv_if_needed():
     # Extract the CSV file
     print(f"Extracting {archive_path}...")
     try:
-        result = subprocess.run(
-            ["7z", "x", str(archive_path), "-y"],  # -y for yes to all prompts
+        result = subprocess.run(  # noqa: S603
+            ["7z", "x", str(archive_path), "-y"],  # -y for yes to all prompts  # noqa: S607
             capture_output=True,
             text=True,
             cwd=Path.cwd(),
+            check=False,
         )
 
         if result.returncode != 0:
@@ -84,7 +85,7 @@ def seed_database():
 
         # Read CSV and insert data
         print(f"Reading data from {csv_path}...")
-        with open(csv_path) as file:
+        with csv_path.open() as file:
             csv_reader = csv.reader(file)
 
             systems_to_insert = []

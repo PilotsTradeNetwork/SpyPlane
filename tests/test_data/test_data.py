@@ -1,5 +1,5 @@
 import json
-import os
+from pathlib import Path
 
 
 class MockResponse:
@@ -18,7 +18,7 @@ class MockResponse:
         return self
 
 
-dirname = os.path.dirname(__file__)
+dirname = Path(__file__).parent
 
 
 def mocked_requests_get(*args, **kwargs):
@@ -30,5 +30,5 @@ def mocked_requests_get(*args, **kwargs):
 
 
 def load_file_as_response(filename):
-    with open(f"{dirname}/{filename}.json") as data:
+    with (dirname / f"{filename}.json").open() as data:
         return MockResponse(data.read(), 200)

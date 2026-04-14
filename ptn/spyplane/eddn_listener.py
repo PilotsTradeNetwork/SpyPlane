@@ -177,7 +177,7 @@ _eddn_listener_thread: EddnListenerThread | None = None
 
 def get_eddn_listener_thread() -> EddnListenerThread:
     """Get or create the EDDN listener thread instance"""
-    global _eddn_listener_thread
+    global _eddn_listener_thread  # noqa: PLW0603
     if _eddn_listener_thread is None:
         _eddn_listener_thread = EddnListenerThread()
     return _eddn_listener_thread

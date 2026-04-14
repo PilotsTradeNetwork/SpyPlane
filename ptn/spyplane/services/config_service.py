@@ -21,7 +21,7 @@ class ConfigService:
         return embed
 
     async def update_config(self, name: str, value: str):
-        # TODO refactor when we have more configuration
+        # Note: refactor when we have more configuration options
         name_lower = name.lower()
         value_lower = value.lower()
         supported_configs = ["carryover", "interval_hours"]

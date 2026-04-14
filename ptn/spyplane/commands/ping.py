@@ -11,5 +11,5 @@ bot = get_bot()
 async def ping(ctx):
     """Ping command that responds with a random hello gif and bot version"""
     log(f"{ctx.author} used PING in {ctx.channel.name}")
-    gif = random.choice(hello_gifs)
+    gif = random.choice(hello_gifs)  # noqa: S311
     await ctx.send(f"{gif}\n\nVersion: **{__version__}**")

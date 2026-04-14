@@ -1,5 +1,7 @@
 """Journal helper for filtering EDDN events"""
 
+from typing import ClassVar
+
 from ptn.spyplane.services.scout_systems_cache import ScoutSystemsCache
 
 
@@ -7,7 +9,7 @@ class JournalHelper:
     """Helper class for filtering journal events from EDDN stream"""
 
     # Events we want to capture
-    TARGET_EVENTS = ["FSDJump", "Location", "CarrierJump"]
+    TARGET_EVENTS: ClassVar[list[str]] = ["FSDJump", "Location", "CarrierJump"]
 
     def __init__(self):
         self.cache = ScoutSystemsCache()
