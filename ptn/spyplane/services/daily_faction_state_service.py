@@ -35,11 +35,8 @@ class DailyFactionStateService:
         pending_without_expansion = [s for s in pending_states if s != "expansion"]
 
         # Format: one line per state
-        formatted_lines = []
-        for state in active_without_expansion:
-            formatted_lines.append(f"{faction} - {state} (Active)")
-        for state in pending_without_expansion:
-            formatted_lines.append(f"{faction} - {state} (Pending)")
+        formatted_lines = [f"{faction} - {state} (Active)" for state in active_without_expansion]
+        formatted_lines.extend(f"{faction} - {state} (Pending)" for state in pending_without_expansion)
 
         return formatted_lines
 
@@ -48,7 +45,7 @@ class DailyFactionStateService:
             return None
         if influence > 0.7:
             return "danger"
-        elif influence > 0.65:
+        if influence > 0.65:
             return "warning"
         return None
 
@@ -59,7 +56,7 @@ class DailyFactionStateService:
         ptn_warnings = await self.faction_states_repo.get_ptn_influence_warnings()
         if ptn_warnings:
             ptn_lines = []
-            for system, faction, influence, _controlling in ptn_warnings:
+            for system, _faction, influence, _controlling in ptn_warnings:
                 status = self._get_ptn_status(influence)
                 if status:
                     ptn_lines.append(f"{system} - {status} ({influence:.1%})")
@@ -95,7 +92,7 @@ class DailyFactionStateService:
                     if formatted_states:
                         embed.add_field(name=system, value="\n".join(formatted_states), inline=False)
 
-            except Exception as e:
+            except Exception as e:  # noqa: PERF203
                 log_exception(f"Error processing system {system} for daily report", e)
 
         bot = get_bot()

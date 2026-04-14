@@ -80,7 +80,7 @@ select = [
     "F",   # pyflakes
     "PL",  # pylint-convention
     "I",   # isort
-    # "N",   # pep8-naming
+    "N",   # pep8-naming
     "RUF", # ruff (54 errors)
     "B",   # flake8-bugbear
     "C4",  # flake8-comprehensions
@@ -97,17 +97,16 @@ select = [
     "TC",  # flake8-type-checking
     "PERF", # perflint
     "FURB", # refurb
-    # "RET", # flake8-return
+    "RET", # flake8-return
     "ARG", # flake8-arguments
-    # "FIX", # flake8-fixme
-    # "DTZ", # flake8-datetimez
-    # "PTH", # flake8-use-pathlib
+    "FIX", # flake8-fixme
+    "DTZ", # flake8-datetimez
+    "PTH", # flake8-use-pathlib
     # "BLE",  # flake8-blind-except
     # "FBT",  # flake8-boolean-trap
     # "C90", # mccabe complexity
 ]
 ignore = [
-    # "E402",
     "E501",  # line too long, handled by ruff format
     "PLR",   # pylint-refactor
 ]

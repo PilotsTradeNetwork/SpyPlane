@@ -53,5 +53,5 @@ class PostAfterTickService:
             self.on_tick()
 
     def on_tick(self):
-        asyncio.create_task(self.run_after_interval(True, "interval_hours", self.post_systems))
-        asyncio.create_task(self.run_after_interval(False, "daily_interval_hours", self.post_report))
+        asyncio.create_task(self.run_after_interval(True, "interval_hours", self.post_systems))  # noqa: RUF006
+        asyncio.create_task(self.run_after_interval(False, "daily_interval_hours", self.post_report))  # noqa: RUF006

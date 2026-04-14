@@ -54,7 +54,7 @@ async def on_ready():
                 description=f"<@{bot.user.id}> connected, version **{__version__}**.",
                 color=0x00FF00,  # Green color
             )
-            embed.set_image(url=random.choice(hello_gifs))
+            embed.set_image(url=random.choice(hello_gifs))  # noqa: S311
             await botdev_channel.send(embed=embed)
 
         # Set bot.channel to dev channel for reaction handler
@@ -108,7 +108,7 @@ async def on_error(event, *args, **kwargs):
 @bot.event
 async def on_message(message: Message):
     """Greet if mentioned and ping is written"""
-    TXT_COMMANDS = ["ping"]
+    txt_commands = ["ping"]
     try:
         msg_split = message.content.split()
 
@@ -124,14 +124,14 @@ async def on_message(message: Message):
             return
 
         # Don't send the gif if a command is detected (even by someone who has no access)
-        if len(msg_split) >= 2 and msg_split[1].lower() in TXT_COMMANDS:
+        if len(msg_split) >= 2 and msg_split[1].lower() in txt_commands:
             # Process commands normally
             await bot.process_commands(message)
             return
 
         # Now that we've ruled out all the cases where we don't want to send the gif, send the gif
         log(f"Bot mentioned in {message.channel.name}, greeting")
-        gif = random.choice(hello_gifs)
+        gif = random.choice(hello_gifs)  # noqa: S311
         await message.channel.send(gif, reference=message)
         # Still process commands in case there are other commands
         await bot.process_commands(message)
@@ -156,7 +156,7 @@ async def on_raw_reaction_add(payload: RawReactionActionEvent):
             )
             return
         message: Message = await bot.channel.fetch_message(payload.message_id)
-        asyncio.create_task(
+        asyncio.create_task(  # noqa: RUF006
             record_service.record_reaction(message.content, payload.member.name, payload.member.id)
         )  # Another option is to try a Queue
         if not message.pinned:  # prevent deleting pinned messages with reactions in the channel
@@ -168,7 +168,7 @@ async def on_raw_reaction_add(payload: RawReactionActionEvent):
 @bot.tree.error
 async def on_app_command_error(interaction: Interaction, error: AppCommandError):
     """Global error handler for app commands (slash commands)"""
-    gif = random.choice(error_gifs)
+    gif = random.choice(error_gifs)  # noqa: S311
 
     try:
         log(
@@ -182,7 +182,7 @@ async def on_app_command_error(interaction: Interaction, error: AppCommandError)
             )
             try:
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-            except:
+            except Exception:
                 await interaction.followup.send(embed=embed, ephemeral=True)
 
         elif isinstance(error, app_commands.CommandOnCooldown):
@@ -192,14 +192,14 @@ async def on_app_command_error(interaction: Interaction, error: AppCommandError)
             )
             try:
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-            except:
+            except Exception:
                 await interaction.followup.send(embed=embed, ephemeral=True)
 
         else:
             # Generic error - send gif and error message
             try:
                 await interaction.response.send_message(gif, ephemeral=True)
-            except:
+            except Exception:
                 await interaction.followup.send(gif, ephemeral=True)
 
             embed = Embed(
@@ -208,7 +208,7 @@ async def on_app_command_error(interaction: Interaction, error: AppCommandError)
             )
             try:
                 await interaction.followup.send(embed=embed, ephemeral=True)
-            except:
+            except Exception:
                 # If followup also fails, try sending to channel
                 if interaction.channel:
                     await interaction.channel.send(embed=embed)
@@ -219,5 +219,5 @@ async def on_app_command_error(interaction: Interaction, error: AppCommandError)
         try:
             if not interaction.response.is_done():
                 await interaction.response.send_message(gif, ephemeral=True)
-        except:
-            pass
+        except Exception as last_resort_error:
+            log_exception("on_app_command_error last resort", last_resort_error)

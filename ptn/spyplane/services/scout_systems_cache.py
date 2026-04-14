@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import ClassVar, Optional
 
 from ptn.spyplane.models.scout_system import ScoutSystem
 
@@ -7,7 +7,7 @@ class ScoutSystemsCache:
     """In-memory cache for scout systems"""
 
     _instance: Optional["ScoutSystemsCache"] = None
-    _systems: dict[str, ScoutSystem] = {}
+    _systems: ClassVar[dict[str, ScoutSystem]] = {}
 
     def __new__(cls):
         if cls._instance is None:

@@ -62,7 +62,7 @@ class HeaderFooterModal(Modal):
 
             if not header_changed and not footer_changed:
                 await interaction.response.send_message(
-                    "ℹ️ No changes detected. Header and footer remain unchanged.", ephemeral=True
+                    "No changes detected. Header and footer remain unchanged.", ephemeral=True
                 )
                 return
 

@@ -84,18 +84,11 @@ class SystemsPostingService:
 
             # Try alternative approach - delete messages individually
             try:
-                messages = []
-                async for message in bot.channel.history(limit=None):
-                    if not message.pinned:
-                        messages.append(message)
-
+                messages = [message async for message in bot.channel.history(limit=None) if not message.pinned]
                 for message in messages:
-                    try:
-                        await message.delete()
-                    except Exception:
-                        continue
-            except Exception:
-                pass
+                    await message.delete()
+            except Exception as e:
+                log(f"[ERROR] fallback message deletion failed: {e}")
 
     @staticmethod
     def is_not_pinned_message(message: discord.message.Message) -> bool:
@@ -137,9 +130,8 @@ class SystemsPostingService:
         }
 
     def _get_daily_sequence(self) -> int:
-        today = datetime.date.today()
-        days_since_start = (today - self.start_date).days
-        return days_since_start
+        today = datetime.datetime.now(datetime.timezone.utc).date()
+        return (today - self.start_date).days
 
     @staticmethod  # https://stackoverflow.com/questions/2130016/splitting-a-list-into-n-parts-of-approximately-equal-length
     def split(array, split_size):
