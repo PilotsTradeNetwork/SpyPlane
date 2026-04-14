@@ -32,6 +32,12 @@ FROM faction_goals
 WHERE "index" = ?
 """
 
+update_goal = """
+UPDATE faction_goals
+SET system = ?, faction_one = ?, faction_other = ?, goalkind = ?, additional_note = ?
+WHERE "index" = ?
+"""
+
 
 class FactionGoalsRepository(BaseRepository):
     def __init__(self, config_repo=None):
@@ -89,6 +95,29 @@ class FactionGoalsRepository(BaseRepository):
         async with self.db().execute(select_all_goals) as cur:
             rows = await cur.fetchall()
             return [(row[0], row[1], row[2], row[3], row[4], row[5]) for row in rows]
+
+    async def update_goal(
+        self,
+        index: int,
+        system: str,
+        faction_one: str,
+        faction_other: str,
+        goalkind: str,
+        additional_note: str | None = None,
+    ) -> bool:
+        try:
+            await self.begin()
+            cursor = await self.db().execute(
+                update_goal, [system, faction_one, faction_other, goalkind, additional_note, index]
+            )
+            await self.commit()
+            updated = cursor.rowcount > 0
+            if updated:
+                log(f"Updated faction goal: index={index}, system={system}, goalkind={goalkind}")
+            return updated
+        except Exception:
+            await self.rollback()
+            raise
 
     async def get_goal_by_index(self, index: int) -> tuple[int, str, str, str, str, str | None] | None:
         async with self.db().execute(select_goal_by_index, [index]) as cur:
