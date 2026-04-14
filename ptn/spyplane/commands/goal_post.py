@@ -31,7 +31,7 @@ def render_goal_template(goalkind: str, system: str, faction_one: str, faction_o
 @bot.tree.command(name="goal_post")
 async def goal_post(interaction: discord.Interaction):
     """Post or update the faction goals embed"""
-    await interaction.response.defer()
+    await interaction.response.defer(ephemeral=True)
 
     repo = FactionGoalsRepository()
     header_footer_repo = FactionHeaderFooterRepository()
@@ -50,18 +50,16 @@ async def goal_post(interaction: discord.Interaction):
             await interaction.followup.send("❌ Goals channel not found. Please check bot configuration.")
             return
 
-        # Get old message ID and try to delete the old message
+        # Try to find an existing message to edit
+        existing_message = None
         old_message_id = await repo.get_message_id()
         if old_message_id:
             try:
-                old_message = await goals_channel.fetch_message(old_message_id)
-                if not old_message.pinned:
-                    await old_message.delete()
-                    log(f"Deleted old faction goals message: {old_message_id}")
+                existing_message = await goals_channel.fetch_message(old_message_id)
             except discord.NotFound:
-                log(f"Old message {old_message_id} not found, continuing")
+                log(f"Old message {old_message_id} not found, will post a new one")
             except Exception as e:
-                log(f"Error deleting old message {old_message_id}: {e}")
+                log(f"Error fetching old message {old_message_id}: {e}")
 
         # Get header and footer
         header, footer_template = await header_footer_repo.get_header_footer()
@@ -157,12 +155,14 @@ async def goal_post(interaction: discord.Interaction):
             text="Last Updated",
         )
 
-        # Post the embed to goals channel
-        message = await goals_channel.send(embed=embed)
-
-        # Store the new message ID
-        await repo.set_message_id(message.id)
-        log(f"Posted faction goals embed with message ID: {message.id}")
+        # Edit the existing message if we have one, otherwise post a new one
+        if existing_message:
+            await existing_message.edit(embed=embed)
+            log(f"Edited faction goals embed in message ID: {existing_message.id}")
+        else:
+            existing_message = await goals_channel.send(embed=embed)
+            await repo.set_message_id(existing_message.id)
+            log(f"Posted new faction goals embed with message ID: {existing_message.id}")
 
         await interaction.followup.send("✅ Faction goals embed posted/updated.", ephemeral=True)
 
