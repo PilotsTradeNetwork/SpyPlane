@@ -31,6 +31,7 @@ spy = "ptn.spyplane.spy_plane:run"
 lint = "ptn.spyplane.ruff_commands:lint"
 format = "ptn.spyplane.ruff_commands:format_code"
 lint-fix = "ptn.spyplane.ruff_commands:lint_fix"
+tests = "ptn.spyplane.ruff_commands:run_tests"
 
 [tool.uv]
 package = true
