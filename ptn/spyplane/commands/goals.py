@@ -14,6 +14,7 @@ from ptn.spyplane.database.faction_header_footer_repository import FactionHeader
 # Autocomplete helpers
 # --------------------
 
+
 # (must be defined before the group decorators reference them)
 async def goal_id_autocomplete(_interaction: Interaction, current: str) -> list[app_commands.Choice[int]]:
     repo = FactionGoalsRepository()
