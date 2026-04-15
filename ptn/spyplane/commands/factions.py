@@ -1,8 +1,7 @@
-import asyncio
 import csv
 import io
-from asyncio.subprocess import PIPE, STDOUT
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import discord
 from discord import Interaction, TextStyle, app_commands
@@ -135,14 +134,14 @@ async def faction_operations_report(interaction: Interaction):
             )
         embed.set_footer(text="[TOP SECRET] Eyes-Only Faction Command")
         exitcode = await run_export_script()
-        if exitcode == 0:
+        if exitcode:
             log("[INFO] Export completed successfully.")
             await interaction.followup.send(
                 embed=embed,
                 file=discord.File("./workspace/faction_command_eyesonly.csv"),
             )
         else:
-            log(f"[INFO] Export failed with exitcode: {exitcode}")
+            log("[INFO] Export failed.")
             await interaction.followup.send(embed=embed)
             await interaction.followup.send("⚠️ CSV export failed, but scout rankings are available above.")
     except Exception as e:
@@ -228,12 +227,20 @@ bot.tree.add_command(faction)
 # ------
 
 
-async def run_export_script():
-    cmd = "./ptn/spyplane/scripts/export_scout_history.sh"
+async def run_export_script() -> bool:
     log("[INFO] Starting Export...")
-    process = await asyncio.create_subprocess_shell(cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT)
-    await process.wait()
-    return process.returncode
+    try:
+        async with get_bot().db.execute("SELECT * FROM scout_history") as cursor:
+            rows = await cursor.fetchall()
+            col_names = [description[0] for description in cursor.description]
+        with Path("./workspace/faction_command_eyesonly.csv").open("w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(col_names)
+            writer.writerows(rows)
+        return True
+    except Exception as e:
+        log(f"[ERROR] Export failed: {e}")
+        return False
 
 
 # -----
