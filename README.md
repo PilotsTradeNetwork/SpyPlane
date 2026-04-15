@@ -38,11 +38,14 @@ Scouting bot
 From the repo root
 
 ```bash
-# Using uv (recommended)
-uv run python -m unittest discover tests -v
+uv run tests
+```
 
-# Or using python directly
-python -m unittest
+This recreates the test DB from schema and then runs the full suite. Equivalent to:
+
+```bash
+bash db/test_recreate.sh
+uv run python -m unittest discover tests -v
 ```
 
 

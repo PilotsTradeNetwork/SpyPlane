@@ -1,6 +1,6 @@
 #!/usr/bin/env python3  # noqa: EXE001
 """
-Ruff command wrappers for the SpyPlane project.
+Ruff and test command wrappers for the SpyPlane project.
 """
 
 import subprocess
@@ -31,6 +31,25 @@ def format_code():
 def lint_fix():
     """Run ruff check --fix."""
     run_ruff_command(["check", "--fix", "."])
+
+
+def run_tests():
+    """Recreate the test DB then run the full unittest suite."""
+    root = Path.cwd()
+    recreate = root / "db" / "test_recreate.sh"
+    try:
+        result = subprocess.run(["bash", str(recreate)], cwd=root, check=False)  # noqa: S603,S607
+        if result.returncode != 0:
+            sys.exit(result.returncode)
+    except FileNotFoundError:
+        print("Error: bash not found.")
+        sys.exit(1)
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, "-m", "unittest", "discover", "tests", "-v"],
+        cwd=root,
+        check=False,
+    )
+    sys.exit(result.returncode)
 
 
 if __name__ == "__main__":
