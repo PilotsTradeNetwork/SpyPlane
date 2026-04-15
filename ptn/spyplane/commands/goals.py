@@ -4,11 +4,14 @@ from urllib.parse import quote
 import discord
 from discord import Interaction, TextStyle, app_commands
 from discord.ui import Modal, Select, TextInput, View
+from ptn_utils.global_constants import CHANNEL_FACTION_GOALS, EMOJI_ASSASSIN, EMOJI_COURIER, EMOJI_PARTNERSHIP
+from ptn_utils.logger.logger import get_logger
 
 from ptn.spyplane.bot_registry import get_bot
-from ptn.spyplane.constants import EMOJI_ASSASSIN, EMOJI_COURIER, EMOJI_PARTNERSHIP, GOALS_CHANNEL, log
 from ptn.spyplane.database.faction_goals_repository import FactionGoalsRepository
 from ptn.spyplane.database.faction_header_footer_repository import FactionHeaderFooterRepository
+
+logger = get_logger("spyplane.commands.goals")
 
 # --------------------
 # Autocomplete helpers
@@ -20,8 +23,8 @@ async def goal_id_autocomplete(_interaction: Interaction, current: str) -> list[
     repo = FactionGoalsRepository()
     try:
         goals = await repo.get_all_goals()
-    except Exception as e:
-        log(f"Error fetching goals for autocomplete: {e}")
+    except Exception:
+        logger.exception("Error fetching goals for autocomplete")
         return []
     choices = []
     for index, _system, faction_one, _faction_other, goalkind, _note in goals:
@@ -47,7 +50,7 @@ async def goal_add(interaction: Interaction):
         view = GoalKindSelectView()
         await interaction.response.send_message("Select a goal kind:", view=view, ephemeral=True)
     except Exception as e:
-        log(f"Error opening add goal modal: {e}")
+        logger.exception("Error opening add goal modal")
         await interaction.response.send_message(f"❌ Error opening goal editor: {e!s}", ephemeral=True)
 
 
@@ -71,7 +74,7 @@ async def goal_edit(interaction: Interaction, goal_id: int):
             ephemeral=True,
         )
     except Exception as e:
-        log(f"Error opening edit goal view: {e}")
+        logger.exception("Error opening edit goal view")
         await interaction.response.send_message(f"❌ Error opening goal editor: {e!s}", ephemeral=True)
 
 
@@ -84,7 +87,7 @@ async def goal_embed(interaction: Interaction):
         modal = HeaderFooterModal(current_header=current_header, current_footer=current_footer)
         await interaction.response.send_modal(modal)
     except Exception as e:
-        log(f"Error opening header/footer modal: {e}")
+        logger.exception("Error opening header/footer modal")
         await interaction.response.send_message(f"❌ Error opening header/footer editor: {e!s}", ephemeral=True)
 
 
@@ -149,7 +152,7 @@ async def goal_post(interaction: discord.Interaction):
         if not goals:
             await interaction.followup.send("❌ No faction goals found. Add goals using `/goal add` first.")
             return
-        goals_channel = bot.get_channel(GOALS_CHANNEL)
+        goals_channel = await bot.get_or_fetch.channel(CHANNEL_FACTION_GOALS)
         if not goals_channel:
             await interaction.followup.send("❌ Goals channel not found. Please check bot configuration.")
             return
@@ -159,9 +162,9 @@ async def goal_post(interaction: discord.Interaction):
             try:
                 existing_message = await goals_channel.fetch_message(old_message_id)
             except discord.NotFound:
-                log(f"Old message {old_message_id} not found, will post a new one")
-            except Exception as e:
-                log(f"Error fetching old message {old_message_id}: {e}")
+                logger.info(f"Old message {old_message_id} not found, will post a new one")
+            except Exception:
+                logger.exception(f"Error fetching old message {old_message_id}")
         header, footer_template = await header_footer_repo.get_header_footer()
         current_timestamp = int(datetime.now(timezone.utc).timestamp())
         footer = footer_template.replace("{}", str(current_timestamp))
@@ -212,14 +215,14 @@ async def goal_post(interaction: discord.Interaction):
         )
         if existing_message:
             await existing_message.edit(embed=embed)
-            log(f"Edited faction goals embed in message ID: {existing_message.id}")
+            logger.info(f"Edited faction goals embed in message ID: {existing_message.id}")
         else:
             existing_message = await goals_channel.send(embed=embed)
             await repo.set_message_id(existing_message.id)
-            log(f"Posted new faction goals embed with message ID: {existing_message.id}")
+            logger.info(f"Posted new faction goals embed with message ID: {existing_message.id}")
         await interaction.followup.send("✅ Faction goals embed posted/updated.", ephemeral=True)
     except Exception as e:
-        log(f"Error posting faction goals: {e}")
+        logger.exception("Error posting faction goals")
         await interaction.followup.send(f"❌ Error posting faction goals: {e!s}")
 
 
@@ -256,7 +259,7 @@ async def goal_remove(interaction: Interaction, index: int | None = None, remove
         else:
             await interaction.followup.send(f"❌ Failed to remove goal with index {index}.")
     except Exception as e:
-        log(f"Error removing faction goal: {e}")
+        logger.exception("Error removing faction goal")
         await interaction.followup.send(f"❌ Error removing faction goal: {e!s}")
 
 
@@ -422,7 +425,7 @@ class AddGoalModal(BaseGoalModal):
                 response_text += f"\n**Additional Note:** {additional_note}"
             await interaction.response.send_message(response_text, ephemeral=True)
         except Exception as e:
-            log(f"Error adding faction goal: {e}")
+            logger.exception("Error adding faction goal")
             await interaction.response.send_message(f"❌ Error adding faction goal: {e!s}", ephemeral=True)
 
 
@@ -456,7 +459,7 @@ class AddCustomGoalModal(BaseGoalModal):
             )
             await interaction.response.send_message(response_text, ephemeral=True)
         except Exception as e:
-            log(f"Error adding custom goal: {e}")
+            logger.exception("Error adding custom goal")
             await interaction.response.send_message(f"❌ Error adding custom goal: {e!s}", ephemeral=True)
 
 
@@ -565,7 +568,7 @@ class EditGoalModal(Modal):
                 response_text += f"\n**Additional Note:** {additional_note}"
             await interaction.response.send_message(response_text, ephemeral=True)
         except Exception as e:
-            log(f"Error updating faction goal: {e}")
+            logger.exception("Error updating faction goal")
             await interaction.response.send_message(f"❌ Error updating faction goal: {e!s}", ephemeral=True)
 
 
@@ -641,7 +644,7 @@ class EditCustomGoalModal(Modal):
             )
             await interaction.response.send_message(response_text, ephemeral=True)
         except Exception as e:
-            log(f"Error updating custom goal: {e}")
+            logger.exception("Error updating custom goal")
             await interaction.response.send_message(f"❌ Error updating custom goal: {e!s}", ephemeral=True)
 
 
@@ -706,7 +709,7 @@ class HeaderFooterModal(Modal):
                 message = f"✅ Updated faction goals footer:\n{footer[:200]}{'...' if len(footer) > 200 else ''}"
             await interaction.response.send_message(message, ephemeral=True)
         except Exception as e:
-            log(f"Error updating faction goals header/footer: {e}")
+            logger.exception("Error updating faction goals header/footer")
             await interaction.response.send_message(
                 f"❌ Error updating faction goals header/footer: {e!s}", ephemeral=True
             )

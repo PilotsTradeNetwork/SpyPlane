@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-DB=./workspace/spyplane.db
+DB=./ptn/data/spyplane.db
 
 rm -rf "$DB"
 sqlite3 "$DB" < ./db/schema.sql

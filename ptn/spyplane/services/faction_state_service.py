@@ -1,5 +1,8 @@
-from ptn.spyplane.constants import log, log_exception
+from ptn_utils.logger.logger import get_logger
+
 from ptn.spyplane.database.faction_states_repository import FactionStatesRepository
+
+logger = get_logger("spyplane.services.faction_state_service")
 
 
 class FactionStateService:
@@ -24,7 +27,7 @@ class FactionStateService:
             star_system = message.get("StarSystem")
 
             if not star_system:
-                log("EDDN event missing StarSystem field for faction state extraction")
+                logger.info("EDDN event missing StarSystem field for faction state extraction")
                 return []
 
             controlling_faction_name = None
@@ -44,8 +47,8 @@ class FactionStateService:
                 for faction in message.get("Factions", [])
                 if faction.get("Name")
             ]
-        except Exception as e:
-            log_exception("Error extracting faction states from EDDN event", e)
+        except Exception:
+            logger.exception("Error extracting faction states from EDDN event")
             return []
 
     async def replace_faction_states_from_event(self, json_data: dict) -> None:
@@ -54,6 +57,6 @@ class FactionStateService:
 
             if faction_states:
                 await self.repo.replace_faction_states_for_system(faction_states)
-                log(f"Replaced {len(faction_states)} faction states from EDDN event")
-        except Exception as e:
-            log_exception("Error replacing faction states from EDDN event", e)
+                logger.info(f"Replaced {len(faction_states)} faction states from EDDN event")
+        except Exception:
+            logger.exception("Error replacing faction states from EDDN event")

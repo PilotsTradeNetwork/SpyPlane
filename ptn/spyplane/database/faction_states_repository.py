@@ -1,5 +1,8 @@
-from ptn.spyplane.constants import log
+from ptn_utils.logger.logger import get_logger
+
 from ptn.spyplane.database.base_repository import BaseRepository
+
+logger = get_logger("spyplane.database.faction_states_repository")
 
 insert_faction_state = """
 INSERT INTO faction_states (system, faction, active_csv, pending_csv, influence, controlling)
@@ -62,7 +65,7 @@ class FactionStatesRepository(BaseRepository):
                 )
 
             await self.commit()
-            log(f"Replaced {len(faction_states)} faction states for system: {system}")
+            logger.info(f"Replaced {len(faction_states)} faction states for system: {system}")
         except Exception:
             await self.rollback()
             raise
@@ -91,7 +94,7 @@ class FactionStatesRepository(BaseRepository):
             await self.begin()
             await self.db().execute(delete_faction_state, [system, faction])
             await self.commit()
-            log(f"Deleted faction state: {system} - {faction}")
+            logger.info(f"Deleted faction state: {system} - {faction}")
         except Exception:
             await self.rollback()
             raise

@@ -1,9 +1,12 @@
 from datetime import datetime, timezone
 
-from ptn.spyplane.constants import log
+from ptn_utils.logger.logger import get_logger
+
 from ptn.spyplane.database.base_repository import BaseRepository
 from ptn.spyplane.models.scout_system import ScoutSystem
 from ptn.spyplane.services.scout_systems_cache import ScoutSystemsCache
+
+logger = get_logger("spyplane.database.systems_repository")
 
 insert_scout_system = """
 insert into scout_systems (system_name, priority, added_by, added_at) values (?,?,?,?);
@@ -86,7 +89,7 @@ class SystemsRepository(BaseRepository):
 
     async def remove_scouted(self, system_name) -> None:
         await self.db().execute(remove_scouted_system, [system_name])
-        log(f"Removed scout: {system_name}")
+        logger.info(f"Removed scout: {system_name}")
 
     async def get_systems(self, query) -> list[ScoutSystem]:
         async with self.db().execute(query) as cur:
@@ -158,8 +161,8 @@ class SystemsRepository(BaseRepository):
             _scout_cache.add(system)
 
             return True
-        except Exception as e:
-            log(f"Error adding system {system_name}: {e}")
+        except Exception:
+            logger.exception(f"Error adding system {system_name}")
             return False
 
     async def remove_system(self, system_name: str) -> bool:
@@ -173,8 +176,8 @@ class SystemsRepository(BaseRepository):
                 _scout_cache.remove(system_name)
                 return True
             return False
-        except Exception as e:
-            log(f"Error removing system {system_name}: {e}")
+        except Exception:
+            logger.exception(f"Error removing system {system_name}")
             return False
 
     async def get_all_tracked_systems(self, force_reload: bool = False) -> list[ScoutSystem]:
@@ -196,7 +199,7 @@ class SystemsRepository(BaseRepository):
         query = "SELECT system_name, priority, added_by, added_at FROM scout_systems ORDER BY added_at"
         systems = await self.get_systems(query)
         _scout_cache.load(systems)
-        log(f"Reloaded {len(systems)} scout systems into cache")
+        logger.info(f"Reloaded {len(systems)} scout systems into cache")
 
     async def bulk_add_systems(self, systems_data: list[tuple[str, str, str]]) -> tuple[int, int]:
         """

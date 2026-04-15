@@ -1,5 +1,8 @@
-from ptn.spyplane.constants import log
+from ptn_utils.logger.logger import get_logger
+
 from ptn.spyplane.database.base_repository import BaseRepository
+
+logger = get_logger("spyplane.database.faction_header_footer_repository")
 
 select_header_footer = """
 SELECT header, footer
@@ -41,7 +44,7 @@ class FactionHeaderFooterRepository(BaseRepository):
             if cursor.rowcount == 0:
                 await self.db().execute(insert_header_footer, ["", footer])
             await self.commit()
-            log("Updated faction goals footer")
+            logger.info("Updated faction goals footer")
         except Exception:
             await self.rollback()
             raise
@@ -53,7 +56,7 @@ class FactionHeaderFooterRepository(BaseRepository):
             if cursor.rowcount == 0:
                 await self.db().execute(insert_header_footer, [header, ""])
             await self.commit()
-            log("Updated faction goals header")
+            logger.info("Updated faction goals header")
         except Exception:
             await self.rollback()
             raise
@@ -70,7 +73,7 @@ class FactionHeaderFooterRepository(BaseRepository):
 
             await self.db().execute(insert_header_footer, [new_header, new_footer])
             await self.commit()
-            log("Updated faction goals header and/or footer")
+            logger.info("Updated faction goals header and/or footer")
         except Exception:
             await self.rollback()
             raise

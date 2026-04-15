@@ -64,7 +64,7 @@ cat /spy/env.list
 
 docker run \
         -d \
-        -v /spy/workspace:/app/workspace \
+        -v /spy/ptn/data:/app/ptn/data \
         -e DB_RECREATE \
         --env-file /spy/env.list \
         --name spyplane_flight \

@@ -1,11 +1,13 @@
 from datetime import datetime, timezone
 
 import discord
+from ptn_utils.logger.logger import get_logger
 
 from ptn.spyplane.bot_registry import get_bot
-from ptn.spyplane.constants import log, log_exception
 from ptn.spyplane.database.faction_states_repository import FactionStatesRepository
 from ptn.spyplane.database.systems_repository import SystemsRepository
+
+logger = get_logger("spyplane.services.daily_faction_state_service")
 
 
 class DailyFactionStateService:
@@ -92,15 +94,15 @@ class DailyFactionStateService:
                     if formatted_states:
                         embed.add_field(name=system, value="\n".join(formatted_states), inline=False)
 
-            except Exception as e:  # noqa: PERF203
-                log_exception(f"Error processing system {system} for daily report", e)
+            except Exception:  # noqa: PERF203
+                logger.exception(f"Error processing system {system} for daily report")
 
         bot = get_bot()
         target_channel = channel or bot.report_channel
         if target_channel:
             await target_channel.send(embed=embed)
         else:
-            log("No report channel available to send daily faction state report")
+            logger.info("No report channel available to send daily faction state report")
 
     @staticmethod
     def common_embed_setup(description: str, title: str) -> discord.Embed:

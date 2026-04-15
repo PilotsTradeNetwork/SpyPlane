@@ -2,14 +2,15 @@ import asyncio
 from datetime import datetime, timezone
 
 import httpx
+from ptn_utils.logger.logger import get_logger
 
-from ptn.spyplane.constants import log
+logger = get_logger("spyplane.services.tick_service")
 
 
 class TickService:
     def __init__(self, current_tick: int | None = None):
         self.current_tick: int = current_tick or asyncio.run(self.fetch_current_tick())
-        log(f"Current Tick: {self.current_tick}")
+        logger.info(f"Current Tick: {self.current_tick}")
         if not self.current_tick:
             raise RuntimeError("Failed to fetch current tick on startup")
 
@@ -21,15 +22,15 @@ class TickService:
             new_tick = await self.fetch_current_tick()
             if not new_tick:
                 raise ValueError("fetch_current_tick returned empty value")
-        except Exception as e:
-            log(f"Error during has_ticked check: {e}")
+        except Exception:
+            logger.exception("Error during has_ticked check")
             return False
         tick_changed = self.current_tick != new_tick
         if tick_changed:
-            log(f"Tick detected: Current {self.current_tick}, New {new_tick}")
+            logger.info(f"Tick detected: Current {self.current_tick}, New {new_tick}")
             self.current_tick = new_tick
         else:
-            log("No new tick")
+            logger.info("No new tick")
         return tick_changed
 
     @staticmethod

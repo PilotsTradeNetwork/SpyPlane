@@ -1,9 +1,12 @@
 from datetime import datetime, timezone
 
+from ptn_utils.logger.logger import get_logger
+
 from ptn.spyplane.bot_registry import get_bot
-from ptn.spyplane.constants import log
 from ptn.spyplane.database.scout_history_repository import ScoutHistoryRepository
 from ptn.spyplane.database.systems_repository import SystemsRepository
+
+logger = get_logger("spyplane.services.scout_recording_service")
 
 
 class ScoutRecordingService:
@@ -14,7 +17,7 @@ class ScoutRecordingService:
     async def record_reaction(self, content: str, username: str, userid: int) -> None:
         try:
             bot = get_bot()
-            log(f"Content: {content}")
+            logger.info(f"Content: {content}")
             system = await self.systems_repo.get_system(content)
             async with bot.lock:
                 await self.systems_repo.begin()
@@ -22,8 +25,7 @@ class ScoutRecordingService:
                 await self.history_repo.record_scout(system, username, userid, ts)
                 await self.systems_repo.remove_scouted(system.system)
                 await self.systems_repo.commit()
-                log(f"Message deleted: {content}")
-                log(f"Scout recorded: {username} scouted {system.system}")
-        except Exception as e:
-            log("OnReaction: Error when recording the scout")
-            log(str(e))
+                logger.info(f"Message deleted: {content}")
+                logger.info(f"Scout recorded: {username} scouted {system.system}")
+        except Exception:
+            logger.exception("OnReaction: Error when recording the scout")

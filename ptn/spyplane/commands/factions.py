@@ -1,16 +1,16 @@
 import csv
 import io
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
 import discord
 from discord import Interaction, TextStyle, app_commands
 from discord.app_commands import Choice
 from discord.ui import Modal, TextInput
+from ptn_utils.logger.logger import get_logger
 
 from ptn.spyplane._metadata import __version__
 from ptn.spyplane.bot_registry import get_bot
-from ptn.spyplane.constants import log
+from ptn.spyplane.constants import DATA_DIR_PATH
 from ptn.spyplane.database.scout_history_repository import ScoutHistoryRepository
 from ptn.spyplane.database.systems_repository import SystemsRepository
 from ptn.spyplane.models.scout_system import ScoutSystem
@@ -22,6 +22,8 @@ from ptn.spyplane.services.systems_posting_service import SystemsPostingService
 # Command group
 # -------------
 
+logger = get_logger("spyplane.commands.factions")
+
 faction = app_commands.Group(name="faction", description="Faction BGS management commands")
 
 
@@ -32,16 +34,16 @@ faction = app_commands.Group(name="faction", description="Faction BGS management
 )
 async def faction_config(interaction: Interaction, name: str, value: str):
     """Assign standard operating protocols"""
-    log(f"User {interaction.user.name} is attempting to set config {name} to {value}: {__version__}.")
+    logger.info(f"User {interaction.user.name} is attempting to set config {name} to {value}: {__version__}.")
     message = await ConfigService().update_config(name, value)
-    log(message)
+    logger.info(message)
     await interaction.response.send_message(message)
 
 
 @faction.command(name="config_dump")
 async def faction_config_dump(interaction: Interaction):
     """Playback of standard operating protocols"""
-    log(f"User {interaction.user.name} is dumping config: {__version__}.")
+    logger.info(f"User {interaction.user.name} is dumping config: {__version__}.")
     embed = await ConfigService().dump_config_embed()
     await interaction.response.send_message(embed=embed)
 
@@ -59,7 +61,7 @@ async def faction_daily_report(interaction: Interaction):
 async def faction_launch(interaction: Interaction):
     """Begin HUMINT and Infiltration operations: Posts the systems to scout in pre-assigned dead drops"""
     await interaction.response.defer(ephemeral=True)
-    log(f"User {interaction.user.name} is posting the systems to scout: {__version__}.")
+    logger.info(f"User {interaction.user.name} is posting the systems to scout: {__version__}.")
     await SystemsPostingService().publish_systems_to_scout()
     await interaction.followup.send("Spy plane is now on the prowl!")
 
@@ -135,17 +137,17 @@ async def faction_operations_report(interaction: Interaction):
         embed.set_footer(text="[TOP SECRET] Eyes-Only Faction Command")
         exitcode = await run_export_script()
         if exitcode:
-            log("[INFO] Export completed successfully.")
+            logger.info("Export completed successfully.")
             await interaction.followup.send(
                 embed=embed,
-                file=discord.File("./workspace/faction_command_eyesonly.csv"),
+                file=discord.File(str(DATA_DIR_PATH / "faction_command_eyesonly.csv")),
             )
         else:
-            log("[INFO] Export failed.")
+            logger.info("Export failed.")
             await interaction.followup.send(embed=embed)
             await interaction.followup.send("⚠️ CSV export failed, but scout rankings are available above.")
-    except Exception as e:
-        log(f"[ERROR] Faction operations report failed: {e}")
+    except Exception:
+        logger.exception("Faction operations report failed")
         embed = discord.Embed(
             title="🔍 Faction Operations Report",
             color=discord.Color.red(),
@@ -176,8 +178,8 @@ async def faction_remove(interaction: Interaction, system_names: str):
             await interaction.followup.send(message)
         else:
             await interaction.followup.send("❌ No systems were removed.")
-    except Exception as e:
-        log(f"Error processing system names: {e}")
+    except Exception:
+        logger.exception("Error processing system names")
         await interaction.followup.send("❌ Error processing system names.")
 
 
@@ -202,8 +204,8 @@ async def faction_removeall(interaction: Interaction, priority: str):
             )
         else:
             await interaction.followup.send(f"No **{priority}** systems found in tracking")
-    except Exception as e:
-        log(f"Error removing all {priority} systems: {e}")
+    except Exception:
+        logger.exception(f"Error removing all {priority} systems")
         await interaction.followup.send(f"❌ Error removing all **{priority}** systems from tracking")
 
 
@@ -213,8 +215,8 @@ async def faction_track(interaction: Interaction):
     repo = SystemsRepository()
     try:
         current_systems = await repo.get_all_tracked_systems()
-    except Exception as e:
-        log(f"Error loading current systems for faction_track modal: {e}")
+    except Exception:
+        logger.exception("Error loading current systems for faction_track modal")
         current_systems = []
     await interaction.response.send_modal(FactionTrackModal(current_systems))
 
@@ -228,18 +230,18 @@ bot.tree.add_command(faction)
 
 
 async def run_export_script() -> bool:
-    log("[INFO] Starting Export...")
+    logger.info("Starting Export...")
     try:
         async with get_bot().db.execute("SELECT * FROM scout_history") as cursor:
             rows = await cursor.fetchall()
             col_names = [description[0] for description in cursor.description]
-        with Path("./workspace/faction_command_eyesonly.csv").open("w", newline="") as f:
+        with (DATA_DIR_PATH / "faction_command_eyesonly.csv").open("w", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(col_names)
             writer.writerows(rows)
         return True
-    except Exception as e:
-        log(f"[ERROR] Export failed: {e}")
+    except Exception:
+        logger.exception("Export failed")
         return False
 
 
@@ -314,8 +316,8 @@ class FactionTrackModal(Modal, title="Track Faction Systems"):
                     for name in names
                 ]
             )
-        except Exception as e:
-            log(f"Error saving tracked systems: {e}")
+        except Exception:
+            logger.exception("Error saving tracked systems")
             await interaction.followup.send("❌ Error saving systems to the database.", ephemeral=True)
             return
         total = sum(len(names) for names in priority_map.values())
@@ -326,5 +328,5 @@ class FactionTrackModal(Modal, title="Track Faction Systems"):
         await interaction.followup.send("\n".join(summary_lines), ephemeral=True)
 
     async def on_error(self, interaction: Interaction, error: Exception):
-        log(f"Error in FactionTrackModal: {error}")
+        logger.error(f"Error in FactionTrackModal: {error}")
         await interaction.followup.send("❌ An unexpected error occurred.", ephemeral=True)

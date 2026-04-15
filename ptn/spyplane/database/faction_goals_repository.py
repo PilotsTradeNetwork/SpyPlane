@@ -1,9 +1,12 @@
 import time
 from datetime import datetime, timezone
 
-from ptn.spyplane.constants import log
+from ptn_utils.logger.logger import get_logger
+
 from ptn.spyplane.database.base_repository import BaseRepository
 from ptn.spyplane.database.config_repository import ConfigRepository
+
+logger = get_logger("spyplane.database.faction_goals_repository")
 
 # Note: "index" is a reserved keyword in SQLite, so it must be quoted in all SQL queries
 insert_goal = """
@@ -57,7 +60,7 @@ class FactionGoalsRepository(BaseRepository):
             await self.begin()
             await self.db().execute(insert_goal, [index, system, faction_one, faction_other, goalkind, additional_note])
             await self.commit()
-            log(f"Added faction goal: index={index}, system={system}, goalkind={goalkind}")
+            logger.info(f"Added faction goal: index={index}, system={system}, goalkind={goalkind}")
         except Exception:
             await self.rollback()
             raise
@@ -69,7 +72,7 @@ class FactionGoalsRepository(BaseRepository):
             await self.commit()
             deleted = cursor.rowcount > 0
             if deleted:
-                log(f"Removed faction goal: index={index}")
+                logger.info(f"Removed faction goal: index={index}")
             return deleted
         except Exception:
             await self.rollback()
@@ -83,7 +86,7 @@ class FactionGoalsRepository(BaseRepository):
             await self.commit()
             count = cursor.rowcount
             if count > 0:
-                log(f"Removed all {count} faction goals")
+                logger.info(f"Removed all {count} faction goals")
             return count
         except Exception:
             await self.rollback()
@@ -113,7 +116,7 @@ class FactionGoalsRepository(BaseRepository):
             await self.commit()
             updated = cursor.rowcount > 0
             if updated:
-                log(f"Updated faction goal: index={index}, system={system}, goalkind={goalkind}")
+                logger.info(f"Updated faction goal: index={index}, system={system}, goalkind={goalkind}")
             return updated
         except Exception:
             await self.rollback()

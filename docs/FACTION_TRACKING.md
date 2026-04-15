@@ -253,7 +253,7 @@ The EDDN (Elite Dangerous Data Network) listener provides automated scouting cap
 
 **Event Dumping:**
 - Optional: Set environment variable `EDDN_DUMP=True` to save all EDDN events to a file
-- Events are saved to: `./workspace/eddn_events.jsonl`
+- Events are saved to: `./ptn/data/eddn_events.jsonl`
 - Useful for debugging or analysis
 
 ### Benefits
@@ -315,7 +315,7 @@ The EDDN (Elite Dangerous Data Network) listener provides automated scouting cap
 
 **Q: Want to see EDDN events?**
 - Set `EDDN_DUMP=True` environment variable
-- Events will be saved to `./workspace/eddn_events.jsonl`
+- Events will be saved to `./ptn/data/eddn_events.jsonl`
 - File is appended to, so it grows over time
 
 ---
@@ -602,7 +602,7 @@ Generates a classified operations report showing scout activity statistics and e
 - **Footer**: "[TOP SECRET] Eyes-Only Faction Command"
 - **CSV File**: Complete scout history export
   - Filename: `faction_command_eyesonly.csv`
-  - Location: `./workspace/faction_command_eyesonly.csv`
+  - Location: `./ptn/data/faction_command_eyesonly.csv`
   - Contains: id, system_name, username, userid, timestamp
 
 **Data Source:**
@@ -628,7 +628,7 @@ Generates a classified operations report showing scout activity statistics and e
 - Generated using SQLite export script
 - Contains all columns from `scout_history` table
 - Headers included in CSV
-- Saved to workspace directory
+- Saved to `ptn/data/` directory
 - File is attached to the Discord message
 
 **Response States:**

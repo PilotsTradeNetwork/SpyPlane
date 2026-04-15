@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -eux
 
-DB=workspace/spyplane.db
+DB=ptn/data/spyplane.db
 
 if [[ -z "${DB_RECREATE-}" ]]; then
   echo "Not creating a new DB"

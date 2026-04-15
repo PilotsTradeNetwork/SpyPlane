@@ -1,10 +1,13 @@
 import time
 from datetime import datetime, timezone
 
-from ptn.spyplane.constants import log
+from ptn_utils.logger.logger import get_logger
+
 from ptn.spyplane.database.base_repository import BaseRepository
 from ptn.spyplane.models.scout_history import ScoutHistory
 from ptn.spyplane.models.scout_system import ScoutSystem
+
+logger = get_logger("spyplane.database.scout_history_repository")
 
 insert_scout_history = """
 insert into scout_history (system_name, username, userid, timestamp) values (?,?,?,?);
@@ -27,7 +30,7 @@ class ScoutHistoryRepository(BaseRepository):
             insert_scout_history,
             (system.system, username, userid, time.mktime(ts.timetuple())),
         )
-        log(f"Added history: {system.system}, {username}, {userid}, {ts}")
+        logger.info(f"Added history: {system.system}, {username}, {userid}, {ts}")
 
     async def get_history(
         self,

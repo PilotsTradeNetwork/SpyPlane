@@ -1,12 +1,15 @@
 import datetime
 
 import discord.message
+from ptn_utils.global_constants import ROLE_FACTION_SCOUT
+from ptn_utils.logger.logger import get_logger
 
 from ptn.spyplane.bot_registry import get_bot
-from ptn.spyplane.constants import FACTION_SCOUT_ROLE_ID, log
 from ptn.spyplane.database.config_repository import ConfigRepository
 from ptn.spyplane.database.systems_repository import SystemsRepository
 from ptn.spyplane.models.scout_system import ScoutSystem
+
+logger = get_logger("spyplane.services.systems_posting_service")
 
 
 class SystemsPostingService:
@@ -30,7 +33,7 @@ class SystemsPostingService:
         splits = self.split_systems_by_priority(tracked_systems, daily_sequence, carryover)
 
         # Log counts before posting
-        log(
+        logger.info(
             f"Posting systems - Primary: {len(splits['Primary'])}, Secondary: {len(splits['Secondary'])}, Tertiary: {len(splits['Tertiary'])}"
         )
 
@@ -39,19 +42,19 @@ class SystemsPostingService:
         await self.post_list(splits, "Tertiary")
 
         if len(tracked_systems):
-            await bot.channel.send(f"<@&{FACTION_SCOUT_ROLE_ID}> List Updated\nLink to top: {first_message.jump_url}")
+            await bot.channel.send(f"<@&{ROLE_FACTION_SCOUT}> List Updated\nLink to top: {first_message.jump_url}")
 
     async def post_list(self, splits, priority_string):
         bot = get_bot()
         systems_for_priority = splits[priority_string]
 
         if not systems_for_priority:
-            log(f"Empty {priority_string} List")
+            logger.info(f"Empty {priority_string} List")
             return None
 
         first_message = None
         # Log the actual count that will be posted after rotation
-        log(f"Posting {len(systems_for_priority)} {priority_string} systems")
+        logger.info(f"Posting {len(systems_for_priority)} {priority_string} systems")
 
         # Send header for non-Primary priorities
         if priority_string != "Primary":
@@ -75,20 +78,20 @@ class SystemsPostingService:
         bot = get_bot()
         try:
             if bot.channel is None:
-                log("[ERROR] bot.channel is None - cannot purge")
+                logger.error("bot.channel is None - cannot purge")
                 return
 
             await bot.channel.purge(limit=None, check=self.is_not_pinned_message)
-        except Exception as e:
-            log(f"[ERROR] channel.purge failed: {e}")
+        except Exception:
+            logger.exception("channel.purge failed")
 
             # Try alternative approach - delete messages individually
             try:
                 messages = [message async for message in bot.channel.history(limit=None) if not message.pinned]
                 for message in messages:
                     await message.delete()
-            except Exception as e:
-                log(f"[ERROR] fallback message deletion failed: {e}")
+            except Exception:
+                logger.exception("fallback message deletion failed")
 
     @staticmethod
     def is_not_pinned_message(message: discord.message.Message) -> bool:

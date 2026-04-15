@@ -56,7 +56,7 @@ def extract_csv_if_needed():
 
 def seed_database():
     # Database path
-    db_path = Path("../../workspace/spyplane.db")
+    db_path = Path("../../ptn/data/spyplane.db")
 
     # Extract CSV if needed
     if not extract_csv_if_needed():

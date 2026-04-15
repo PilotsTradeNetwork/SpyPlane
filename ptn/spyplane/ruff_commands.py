@@ -1,4 +1,4 @@
-#!/usr/bin/env python3  # noqa: EXE001
+#!/usr/bin/env python3
 """
 Ruff and test command wrappers for the SpyPlane project.
 """

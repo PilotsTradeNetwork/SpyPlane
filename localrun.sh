@@ -10,7 +10,7 @@ cat .env
 
 docker run \
        -it \
-        -v ./workspace:/app/workspace \
+        -v ./ptn/data:/app/ptn/data \
         --env-file .env \
         --name spyplane_flight \
         --restart unless-stopped \

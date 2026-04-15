@@ -29,10 +29,10 @@ for the space game *Elite Dangerous*. Key responsibilities:
 |---|---|
 | Language | Python 3.13 (`.python-version` pins to `3.13`) |
 | Package manager | `uv` (see `pyproject.toml` and `uv.lock`) |
-| Runtime | `discord.py 2.6`, `aiosqlite`, `pyzmq`, `aiohttp` |
+| Runtime | `discord.py 2.6`, `aiosqlite`, `pyzmq`, `aiohttp`, `ptn-utils 1.1.1` |
 | Test framework | `unittest` (stdlib `IsolatedAsyncioTestCase`) |
 | Linter/formatter | `ruff` (config in `pyproject.toml`) |
-| Database | SQLite, file at `./workspace/spyplane.db` (prod) or `./tests/test_workspace/spyplane.db` (test) |
+| Database | SQLite, file at `./ptn/data/spyplane.db` (prod) or `./tests/test_workspace/spyplane.db` (test) |
 | Containerisation | Docker via `Dockerfile` + `entrypoint.sh` |
 | CI | GitHub Actions — builds and pushes a Docker image on tag push (`.github/workflows/build.yml`) |
 | Line length | 120 characters (configured in `pyproject.toml`) |
@@ -44,30 +44,33 @@ for the space game *Elite Dangerous*. Key responsibilities:
 
 ```
 SpyPlane/
-├── ptn/spyplane/            # Main source package (installable as ptn-spyplane)
-│   ├── spy_plane.py         # Entry point — SpyPlane Bot class + run()
-│   ├── bot_registry.py      # Singleton registry to avoid circular imports
-│   ├── constants.py         # All env-driven config; prod/test switch; logging helpers
-│   ├── discord_listener.py  # Discord event handlers (on_ready, reactions, etc.)
-│   ├── eddn_listener.py     # Background thread for EDDN ZMQ stream
-│   ├── ruff_commands.py     # Wrappers for `uv run lint / format / lint-fix`
-│   ├── _metadata.py         # __version__
-│   ├── commands/            # One file per slash command; __init__.py imports all
-│   ├── database/            # Repository classes (base + one per table group)
-│   ├── helpers/             # journal_helper.py — EDDN event filtering
-│   ├── models/              # Dataclasses: ScoutSystem, Config, ScoutHistory
-│   ├── services/            # Business logic: posting, tick, faction states, etc.
-│   └── scripts/             # SQL export helpers
+├── ptn/
+│   ├── __init__.py
+│   ├── data/                # Runtime data directory — DB, CSV exports, .env, EDDN dump
+│   │   └── .env             # Discord tokens + secrets (not committed; copy from .env.sample)
+│   └── spyplane/            # Main source package (installable as ptn-spyplane)
+│       ├── spy_plane.py     # Entry point — SpyPlane Bot class + run()
+│       ├── bot_registry.py  # Singleton registry to avoid circular imports
+│       ├── constants.py     # SpyPlane-specific constants; logging wrappers
+│       ├── discord_listener.py  # Discord event handlers (on_ready, reactions, etc.)
+│       ├── eddn_listener.py     # Background thread for EDDN ZMQ stream
+│       ├── ruff_commands.py     # Wrappers for `uv run lint / format / lint-fix`
+│       ├── _metadata.py         # __version__
+│       ├── commands/            # One file per slash command; __init__.py imports all
+│       ├── database/            # Repository classes (base + one per table group)
+│       ├── helpers/             # journal_helper.py — EDDN event filtering
+│       ├── models/              # Dataclasses: ScoutSystem, Config, ScoutHistory
+│       ├── services/            # Business logic: posting, tick, faction states, etc.
+│       └── scripts/             # SQL export helpers
 ├── tests/                   # unittest test suite
 │   ├── test_workspace/      # Test database lives here (spyplane.db)
 │   └── test_data/           # Static fixtures
 ├── db/
 │   ├── schema.sql           # Canonical DB schema (always kept up-to-date)
-│   ├── recreate.sh          # Recreates the production workspace DB
+│   ├── recreate.sh          # Recreates the production ptn/data DB
 │   ├── test_recreate.sh     # Recreates the test DB (used before running tests)
 │   └── data/                # seed_database.py + compressed system CSVs
 ├── eddn_proxy/              # Standalone ZMQ proxy utilities (not part of main bot)
-├── workspace/               # Runtime directory — gitignored DB, CSV files
 ├── pyproject.toml           # Project metadata, dependencies, ruff config, scripts
 ├── uv.lock                  # Locked dependencies (commit changes to this)
 ├── requirements.lock        # pip-compatible lock used by Docker image
@@ -76,32 +79,35 @@ SpyPlane/
 └── localrun.sh              # Docker convenience script for local runs
 ```
 
-The `spyplane/` directory at the repo root contains only `__pycache__` subdirectories — it is a legacy artifact and should not be edited.
-
 ---
 
 ## Environment & Secrets
 
-Copy `.env.sample` to `.env` and populate all values. **Never hardcode secrets.**
-The bot reads credentials exclusively from environment variables via `python-dotenv`.
+Place a `.env` file at `ptn/data/.env` (this is the `DATA_DIR` location that PTN-Library reads
+automatically). **Never hardcode secrets and never commit `.env`.**
 
-Key environment variables (all read in `ptn/spyplane/constants.py`):
+Key environment variables:
 
-| Variable | Purpose |
-|---|---|
-| `PRODUCTION` | `"True"` = prod Discord server, `"False"` (default) = test server |
-| `SPYPLANE_DISCORD_TOKEN_PROD` | Discord bot token for production |
-| `SPYPLANE_DISCORD_TOKEN_TESTING` | Discord bot token for test/dev |
-| `APPLICATION_ID_PROD` / `APPLICATION_ID_TESTING` | Discord application IDs |
-| `PROD_DISCORD_GUILD` / `TEST_DISCORD_GUILD` | Guild IDs for slash command sync |
-| `EDDN_URL` | ZMQ endpoint (default: `tcp://eddn.edcd.io:9500`) |
-| `EDDN_DISABLE` | Set to `"true"` to skip starting the EDDN listener thread |
-| `EDDN_DUMP` | Set to `"True"` to dump raw EDDN events to `workspace/eddn_events.jsonl` |
-| `DB_RECREATE` | Set to any value in Docker to trigger DB recreation on startup |
+| Variable | Where read | Purpose |
+|---|---|---|
+| `PTN_SERVICE` | `ptn_utils.global_constants` | `"True"` = prod Discord server, `"False"` (default) = test server |
+| `DISCORD_TOKEN_PROD` | `ptn/data/.env` via `ptn_utils` | Discord bot token for production |
+| `DISCORD_TOKEN_TESTING` | `ptn/data/.env` via `ptn_utils` | Discord bot token for test/dev |
+| `EDDN_URL` | `ptn/spyplane/constants.py` | ZMQ endpoint (default: `tcp://eddn.edcd.io:9500`) |
+| `EDDN_DISABLE` | `ptn/spyplane/discord_listener.py` | Set to `"true"` to skip starting the EDDN listener thread |
+| `EDDN_DUMP` | `ptn/spyplane/eddn_listener.py` | Set to `"True"` to dump raw EDDN events to `ptn/data/eddn_events.jsonl` |
+| `DB_RECREATE` | `entrypoint.sh` | Set to any value in Docker to trigger DB recreation on startup |
+| `PTN_LOG_LEVEL` | `ptn_utils.logger` | Initial log level: `CRITICAL`, `ERROR`, `WARNING`, `INFO` (default), `DEBUG`, `TRACE` |
 
-`PRODUCTION=False` is the correct setting for all local development and testing.
+`PTN_SERVICE=False` (or unset) is the correct setting for all local development and testing.
 The `is_test` flag in `constants.py` is set automatically when `unittest` is
 detected in `sys.modules` — do not set it manually.
+
+### Token & Guild IDs
+
+PTN-Library provides `TOKEN`, `DISCORD_GUILD`, and `guild_obj` from `ptn_utils.global_constants`
+(selected via `PTN_SERVICE`). SpyPlane reads these directly — no separate token env vars are needed
+beyond what PTN-Library loads from `ptn/data/.env`.
 
 ---
 
@@ -144,7 +150,7 @@ if the test DB does not exist or is stale.
 bash db/recreate.sh
 ```
 
-Same steps but writes to `./workspace/spyplane.db` and also seeds with
+Same steps but writes to `./ptn/data/spyplane.db` and also seeds with
 `db/data/seed_database.py`.
 
 ---
@@ -162,6 +168,8 @@ uv run python -m unittest discover tests -v
   from `ptn.spyplane.spy_plane` to open/close the real SQLite connection.
 - `test_post_after_tick_service.py` makes a real HTTP request to
   `http://tick.infomancer.uk/galtick.json` — it requires network access.
+- Before running tests, ensure `ptn/data/.env` exists (even if empty) so PTN-Library's
+  `load_dotenv` does not raise on import.
 - The `PyNaCl is not installed` warning printed during test runs is harmless
   (it only affects Discord voice features).
 
@@ -269,7 +277,8 @@ Follow these rules exactly when adding new code:
 
 | File | Purpose |
 |---|---|
-| `ptn/spyplane/constants.py` | All config, channel/role IDs, env vars, logging |
+| `ptn/spyplane/constants.py` | SpyPlane-specific channel/role/emoji IDs; `DB_PATH`; `EDDN_URL`; loguru `log`/`log_exception` wrappers |
+| `ptn/data/.env` | Discord tokens (`DISCORD_TOKEN_PROD`, `DISCORD_TOKEN_TESTING`) loaded by PTN-Library |
 | `ptn/spyplane/spy_plane.py` | Bot class (`SpyPlane`), DB lifecycle, entry point `run()` |
 | `ptn/spyplane/bot_registry.py` | `register_bot()` / `get_bot()` singleton |
 | `ptn/spyplane/discord_listener.py` | `on_ready`, `on_message`, `on_raw_reaction_add`, error handler |
@@ -282,4 +291,21 @@ Follow these rules exactly when adding new code:
 | `ptn/spyplane/services/faction_state_service.py` | Extract + persist faction states from EDDN |
 | `ptn/spyplane/helpers/journal_helper.py` | Filter EDDN events by type + tracked systems |
 | `db/schema.sql` | Authoritative SQLite schema |
+
+### PTN-Library constants used by SpyPlane
+
+Import from `ptn_utils.global_constants`:
+
+| Symbol | Description |
+|---|---|
+| `TOKEN` | Active Discord bot token (selected by `PTN_SERVICE`) |
+| `DISCORD_GUILD` | Guild ID for the active environment |
+| `guild_obj` | `discord.Object(DISCORD_GUILD)` |
+| `CHANNEL_BOTSPAM` | Bot spam channel |
+| `CHANNEL_DEV_SPY_PLANE` | SpyPlane dev/bot channel (replaces `BOT_DEV_CHANNEL`) |
+| `ROLE_COUNCIL` | Council role |
+| `ROLE_MOD` | Mod role |
+| `ROLE_FO` | Faction Operative role (replaces `ROLE_OPERATIVE`) |
+| `EMOJI_ASSASSIN` | Assassin emoji (replaces `EMOJI_TARGET`) |
+| `any_moderation_role` | `[ROLE_COUNCIL, ROLE_MOD]` |
 | `pyproject.toml` | Dependencies, ruff config, `uv` scripts |

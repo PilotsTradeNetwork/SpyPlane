@@ -4,18 +4,19 @@ import random
 
 from discord import Embed, Interaction, Message, RawReactionActionEvent, app_commands
 from discord.app_commands import AppCommandError
+from ptn_utils.global_constants import (
+    CHANNEL_DEV_SPY_PLANE,
+    CHANNEL_FACTION_MONITORING,
+    CHANNEL_FACTION_SCOUT,
+    EMOJI_ASSASSIN,
+)
+from ptn_utils.logger.logger import get_logger
 
 from ptn.spyplane._metadata import __version__
 from ptn.spyplane.bot_registry import get_bot
 from ptn.spyplane.constants import (
-    BOT_DEV_CHANNEL,
-    CHANNEL_MONITORING,
-    CHANNEL_SCOUT,
-    EMOJI_TARGET,
     error_gifs,
     hello_gifs,
-    log,
-    log_exception,
 )
 from ptn.spyplane.database.systems_repository import SystemsRepository
 from ptn.spyplane.eddn_listener import get_eddn_listener_thread
@@ -33,6 +34,8 @@ class DiscordListener:
         pass
 
 
+logger = get_logger("spyplane.discord_listener")
+
 # Service instances
 post_service = PostAfterTickService()
 record_service = ScoutRecordingService()
@@ -44,10 +47,10 @@ bot = get_bot()
 @bot.event
 async def on_ready():
     try:
-        log(f"{bot.user.name} has connected to Discord server. Version: {__version__}")
+        logger.info(f"{bot.user.name} has connected to Discord server. Version: {__version__}")
 
         # Send hello gif to bot dev channel
-        botdev_channel = bot.get_channel(BOT_DEV_CHANNEL)
+        botdev_channel = await bot.get_or_fetch.channel(CHANNEL_DEV_SPY_PLANE)
         if botdev_channel:
             embed = Embed(
                 title="SPY PLANE ONLINE",
@@ -58,17 +61,17 @@ async def on_ready():
             await botdev_channel.send(embed=embed)
 
         # Set bot.channel to dev channel for reaction handler
-        dev_channel = bot.get_channel(CHANNEL_SCOUT)
+        dev_channel = await bot.get_or_fetch.channel(CHANNEL_FACTION_SCOUT)
         bot.channel = dev_channel
-        bot.report_channel = bot.get_channel(CHANNEL_MONITORING)
+        bot.report_channel = await bot.get_or_fetch.channel(CHANNEL_FACTION_MONITORING)
         bot.lock = asyncio.Lock()
-        emoji = bot.get_emoji(EMOJI_TARGET)
+        emoji = await bot.get_or_fetch.emoji(EMOJI_ASSASSIN)
         bot.emoji_bullseye = emoji or "✅"
 
         # Load scout systems cache on startup
         repo = SystemsRepository()
         systems = await repo.get_all_tracked_systems()
-        log(f"Loaded {len(systems)} scout systems into cache")
+        logger.info(f"Loaded {len(systems)} scout systems into cache")
 
         if not post_service.tick_check_and_schedule.is_running():
             post_service.tick_check_and_schedule.start()
@@ -79,11 +82,11 @@ async def on_ready():
             eddn_listener_thread = get_eddn_listener_thread()
             if not eddn_listener_thread.is_alive():
                 eddn_listener_thread.start()
-                log("EDDN listener thread started")
+                logger.info("EDDN listener thread started")
         else:
-            log("EDDN listener thread disabled via EDDN_DISABLE environment variable")
-    except Exception as e:
-        log_exception("on_ready", e)
+            logger.info("EDDN listener thread disabled via EDDN_DISABLE environment variable")
+    except Exception:
+        logger.exception("Exception in on_ready")
 
     # Cron in not needed anymore, we are able to read embeds, and BGS Bot messages can trigger spy plane.
     # await bot.channel.send(f'{bot.user.name} has connected to Discord server. Version: {__version__}')
@@ -94,15 +97,12 @@ async def on_ready():
 
 @bot.event
 async def on_disconnect():
-    log(f"Spy Plane has disconnected from discord server. Version: {__version__}.")
+    logger.info(f"Spy Plane has disconnected from discord server. Version: {__version__}.")
 
 
 @bot.event
 async def on_error(event, *args, **kwargs):
-    log("ERROR")
-    log(event)
-    log(args)
-    log(kwargs)
+    logger.info(f"ERROR! Event: {event} Args: {args} Kwargs: {kwargs}")
 
 
 @bot.event
@@ -130,13 +130,13 @@ async def on_message(message: Message):
             return
 
         # Now that we've ruled out all the cases where we don't want to send the gif, send the gif
-        log(f"Bot mentioned in {message.channel.name}, greeting")
+        logger.info(f"Bot mentioned in {message.channel.name}, greeting")
         gif = random.choice(hello_gifs)  # noqa: S311
         await message.channel.send(gif, reference=message)
         # Still process commands in case there are other commands
         await bot.process_commands(message)
-    except Exception as e:
-        log_exception("on_message", e)
+    except Exception:
+        logger.exception("Exception in on_message")
         # Still process commands even if there's an error
         await bot.process_commands(message)
 
@@ -144,14 +144,14 @@ async def on_message(message: Message):
 @bot.event
 async def on_raw_reaction_add(payload: RawReactionActionEvent):
     try:
-        if payload.channel_id != BOT_DEV_CHANNEL:
+        if payload.channel_id != CHANNEL_DEV_SPY_PLANE:
             # log(f"Not the right channel {payload.channel_id}")
             return
         if payload.user_id == bot.user.id:
             # log(f"Not the right user {payload.user_id}")
             return
         if str(payload.emoji) != str(bot.emoji_bullseye):
-            log(
+            logger.info(
                 f"Not the target emoji {payload.emoji} {bot.emoji_bullseye} {payload.emoji.name} {bot.emoji_bullseye.name}"
             )
             return
@@ -161,8 +161,8 @@ async def on_raw_reaction_add(payload: RawReactionActionEvent):
         )  # Another option is to try a Queue
         if not message.pinned:  # prevent deleting pinned messages with reactions in the channel
             await message.delete()
-    except Exception as e:
-        log_exception("on_raw_reaction_add", e)
+    except Exception:
+        logger.exception("Exception in on_raw_reaction_add")
 
 
 @bot.tree.error
@@ -171,7 +171,7 @@ async def on_app_command_error(interaction: Interaction, error: AppCommandError)
     gif = random.choice(error_gifs)  # noqa: S311
 
     try:
-        log(
+        logger.info(
             f"Error from {interaction.command.name if interaction.command else 'unknown'} in {interaction.channel.name if interaction.channel else 'unknown'} called by {interaction.user.display_name}: {error}"
         )
 
@@ -213,11 +213,11 @@ async def on_app_command_error(interaction: Interaction, error: AppCommandError)
                 if interaction.channel:
                     await interaction.channel.send(embed=embed)
 
-    except Exception as e:
-        log_exception("on_app_command_error", e)
+    except Exception:
+        logger.exception("Exception in on_app_command_error")
         # Last resort - try to send something
         try:
             if not interaction.response.is_done():
                 await interaction.response.send_message(gif, ephemeral=True)
-        except Exception as last_resort_error:
-            log_exception("on_app_command_error last resort", last_resort_error)
+        except Exception:
+            logger.exception("Exception in on_app_command_error last resort")
