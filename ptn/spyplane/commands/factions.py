@@ -1,3 +1,4 @@
+import asyncio
 import csv
 import io
 from datetime import datetime, timedelta, timezone
@@ -16,6 +17,7 @@ from ptn.spyplane.database.systems_repository import SystemsRepository
 from ptn.spyplane.models.scout_system import ScoutSystem
 from ptn.spyplane.services.config_service import ConfigService
 from ptn.spyplane.services.daily_faction_state_service import DailyFactionStateService
+from ptn.spyplane.services.edsm_service import fetch_edsm_systems
 from ptn.spyplane.services.systems_posting_service import SystemsPostingService
 
 # -------------
@@ -288,22 +290,39 @@ class FactionTrackModal(Modal, title="Track Faction Systems"):
         return [line.strip() for line in text.splitlines() if line.strip()]
 
     async def on_submit(self, interaction: Interaction):
-        await interaction.response.defer(ephemeral=True)
+        await interaction.response.defer()
         repo = SystemsRepository()
         priority_map = {
             "Primary": self._parse_lines(self.primary_input.value),
             "Secondary": self._parse_lines(self.secondary_input.value),
             "Tertiary": self._parse_lines(self.tertiary_input.value),
         }
-        errors: dict[str, list[str]] = {}
-        for priority, names in priority_map.items():
-            invalid = [name for name in names if not await repo.is_valid_system(name)]
-            if invalid:
-                errors[priority] = invalid
+
+        all_names = [(priority, name) for priority, names in priority_map.items() for name in names]
+
+        # Check which names exist in the local DB
+        db_valid = await asyncio.gather(*[repo.is_valid_system(name) for _, name in all_names])
+        db_miss = [all_names[i] for i, valid in enumerate(db_valid) if not valid]
+
+        # Bulk-fetch missing names from EDSM in one request
+        edsm_data = await fetch_edsm_systems([name for _, name in db_miss]) if db_miss else {}
+
+        errors: list[str] = []
+        far_away: list[tuple[str, str]] = []  # (priority, name)
+        unpopulated: list[str] = []
+
+        for priority, name in db_miss:
+            system = edsm_data.get(name)
+            if system is None:
+                errors.append(name)
+                continue
+            if system.distance > 500 and priority != "Tertiary":
+                far_away.append((priority, name))
+            if not system.is_populated:
+                unpopulated.append(name)
+
         if errors:
-            lines = ["## Errors"]
-            for priority, invalid in errors.items():
-                lines.append(f"**{priority}:** {', '.join(invalid)}")
+            lines = ["## Errors", f"System(s) not found: {', '.join(errors)}"]
             await interaction.followup.send("\n".join(lines), ephemeral=True)
             return
         try:
@@ -322,8 +341,13 @@ class FactionTrackModal(Modal, title="Track Faction Systems"):
         summary_lines = [f"✅ Saved **{total}** tracked system(s):"]
         for priority, names in priority_map.items():
             if names:
-                summary_lines.append(f"**{priority}:** {', '.join(names)}")
-        await interaction.followup.send("\n".join(summary_lines), ephemeral=True)
+                summary_lines.append(f"- **{len(names)}** {priority}")
+        if far_away:
+            far_names = ", ".join(f"{name} ({p})" for p, name in far_away)
+            summary_lines.append(f"\n⚠️ **Distant Systems not in Tertiary List:** {far_names}")
+        if unpopulated:
+            summary_lines.append(f"⚠️ **Possibly not populated:** {', '.join(unpopulated)}")
+        await interaction.followup.send("\n".join(summary_lines))
 
     async def on_error(self, interaction: Interaction, error: Exception):
         log(f"Error in FactionTrackModal: {error}")
