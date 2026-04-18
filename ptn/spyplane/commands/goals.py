@@ -275,7 +275,7 @@ def render_goal_template(goalkind: str, faction_one: str, faction_other: str) ->
     templates = {
         "RaiseInf": f"Raise INF for __{faction_one}__ to spark the conflict with __{faction_other}__ <:Courier:{EMOJI_COURIER}>",
         "WinElection": f"Win the Election for __{faction_one}__.  <:partnership:{EMOJI_PARTNERSHIP}>",
-        "WinWar": f"Win the War for __Pilots Trade Network__. <:Assassin:{EMOJI_ASSASSIN}>",
+        "WinWar": f"Win the War for __{faction_one}__. <:Assassin:{EMOJI_ASSASSIN}>",
         "WinCivilWar": f"Win the Civil war for __{faction_one}__. <:Assassin:{EMOJI_ASSASSIN}>",
     }
     return templates.get(goalkind, f"Unknown goal kind: {goalkind}")
