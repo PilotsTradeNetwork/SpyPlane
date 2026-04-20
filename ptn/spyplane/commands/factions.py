@@ -1,18 +1,19 @@
 import asyncio
 import csv
 import io
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Literal
 
 import discord
 from discord import Interaction, TextStyle, app_commands
-from discord.app_commands import Choice
 from discord.ui import Modal, TextInput
 
 from ptn.spyplane._metadata import __version__
 from ptn.spyplane.bot_registry import get_bot
 from ptn.spyplane.constants import log
+from ptn.spyplane.database.config_repository import ConfigRepository
 from ptn.spyplane.database.scout_history_repository import ScoutHistoryRepository
 from ptn.spyplane.database.systems_repository import SystemsRepository
 from ptn.spyplane.models.scout_system import ScoutSystem
@@ -33,7 +34,18 @@ faction = app_commands.Group(name="faction", description="Faction BGS management
     name="Name of the config: Can be `interval_hours` or `carryover` ",
     value="Value: For `interval_hours` should be a number 1 to 24. For `carryover` it should be `true` or `false`",
 )
-async def faction_config(interaction: Interaction, name: Literal["interval_hours", "carryover"], value: str):
+async def faction_config(
+    interaction: Interaction,
+    name: Literal[
+        "interval_hours",
+        "carryover",
+        "primary_limit",
+        "secondary_limit",
+        "tertiary_limit",
+        "selection_mode",
+    ],
+    value: str,
+):
     """Assign standard operating protocols"""
     log(f"User {interaction.user.name} is attempting to set config {name} to {value}: {__version__}.")
     message = await ConfigService().update_config(name, value)
@@ -93,12 +105,13 @@ async def faction_list(interaction: Interaction):
         color=discord.Color.blue(),
         description=f"Exported {len(tracked_systems)} tracked systems to CSV file",
     )
-    primary_count = len([s for s in tracked_systems if s.priority == "Primary"])
-    secondary_count = len([s for s in tracked_systems if s.priority == "Secondary"])
-    tertiary_count = len([s for s in tracked_systems if s.priority == "Tertiary"])
-    embed.add_field(name="🎯 Primary", value=str(primary_count), inline=True)
-    embed.add_field(name="⚡ Secondary", value=str(secondary_count), inline=True)
-    embed.add_field(name="📊 Tertiary", value=str(tertiary_count), inline=True)
+    counts = {"Primary": 0, "Secondary": 0, "Tertiary": 0}
+    for system in tracked_systems:
+        if system.priority in counts:
+            counts[system.priority] += 1
+    embed.add_field(name="🎯 Primary", value=str(counts["Primary"]), inline=True)
+    embed.add_field(name="⚡ Secondary", value=str(counts["Secondary"]), inline=True)
+    embed.add_field(name="📊 Tertiary", value=str(counts["Tertiary"]), inline=True)
     await interaction.followup.send(embed=embed, file=discord_file)
 
 
@@ -285,6 +298,12 @@ class FactionTrackModal(Modal, title="Track Faction Systems"):
             log(f"Error saving tracked systems: {e}")
             await interaction.followup.send("❌ Error saving systems to the database.", ephemeral=True)
             return
+        # Record the timestamp of this change
+        try:
+            await ConfigRepository().update_config("tracked_changed_at", str(int(time.time())))
+        except Exception as e:
+            log(f"Warning: failed to save tracked_changed_at: {e}")
+
         total = sum(len(names) for names in priority_map.values())
         summary_lines = [f"✅ Saved **{total}** tracked system(s):"]
         for priority, names in priority_map.items():

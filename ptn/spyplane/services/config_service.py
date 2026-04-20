@@ -24,7 +24,14 @@ class ConfigService:
         # Note: refactor when we have more configuration options
         name_lower = name.lower()
         value_lower = value.lower()
-        supported_configs = ["carryover", "interval_hours"]
+        supported_configs = [
+            "carryover",
+            "interval_hours",
+            "primary_limit",
+            "secondary_limit",
+            "tertiary_limit",
+            "selection_mode",
+        ]
         if name_lower not in supported_configs:
             return f"Config was not set. We support only {supported_configs}"
         supported_carryover = ["true", "false"]
@@ -34,6 +41,13 @@ class ConfigService:
             not value_lower.isdigit() or int(value_lower) < 1 or int(value_lower) > 24
         ):
             return "Config was not set. interval_hours supports only numbers between 1 and 24"
+        if name_lower in ("primary_limit", "secondary_limit", "tertiary_limit") and (
+            not value_lower.isdigit() or int(value_lower) < 0
+        ):
+            return f"Config was not set. {name_lower} supports only non-negative integers"
+        supported_selection_modes = ["oldest_first", "absolute"]
+        if name_lower == "selection_mode" and value_lower not in supported_selection_modes:
+            return f"Config was not set. selection_mode supports only {supported_selection_modes}"
 
         await self.repo.update_config(name_lower, value_lower)
         message = f"Config {name_lower} was set to {value_lower}"

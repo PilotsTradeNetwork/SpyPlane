@@ -21,6 +21,7 @@ from ptn.spyplane.database.systems_repository import SystemsRepository
 from ptn.spyplane.eddn_listener import get_eddn_listener_thread
 from ptn.spyplane.services.post_after_tick_service import PostAfterTickService
 from ptn.spyplane.services.scout_recording_service import ScoutRecordingService
+from ptn.spyplane.services.scouting_progress_service import get_scouting_progress_service
 
 
 class DiscordListener:
@@ -36,6 +37,7 @@ class DiscordListener:
 # Service instances
 post_service = PostAfterTickService()
 record_service = ScoutRecordingService()
+progress_service = get_scouting_progress_service()
 
 # Get bot instance - this is safe because DiscordListener is imported after bot is registered
 bot = get_bot()
@@ -72,6 +74,9 @@ async def on_ready():
 
         if not post_service.tick_check_and_schedule.is_running():
             post_service.tick_check_and_schedule.start()
+
+        if not progress_service.update_progress_embeds.is_running():
+            progress_service.start()
 
         # Start EDDN listener thread if not already running and not disabled
         eddn_disable = os.getenv("EDDN_DISABLE", "False").lower() == "true"

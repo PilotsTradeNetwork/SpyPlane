@@ -23,11 +23,12 @@ class SystemsPostingService:
         if should_carryover:
             carryover = await self.repo.get_carryover_systems()
 
-        # Purge channel
+        # Purge channel and posted systems table so totals reflect only what is currently posted
+        await self.repo.purge_posted_systems()
         await self._purge_channel()
 
         daily_sequence = self._get_daily_sequence()
-        splits = self.split_systems_by_priority(tracked_systems, daily_sequence, carryover)
+        splits = await self.split_systems_by_priority(tracked_systems, daily_sequence, carryover)
 
         # Log counts before posting
         log(
@@ -132,17 +133,41 @@ class SystemsPostingService:
     def is_not_pinned_message(message: discord.message.Message) -> bool:
         return not message.pinned
 
-    def split_systems_by_priority(
+    async def split_systems_by_priority(
         self,
         systems: list[ScoutSystem],
         daily_sequence: int,
         carryover: list[ScoutSystem],
     ) -> dict[str, list[ScoutSystem]]:
+        # Read per-priority limits and selection mode from config
+        primary_limit = int((await self.config_repo.get_config("primary_limit")).value)
+        secondary_limit = int((await self.config_repo.get_config("secondary_limit")).value)
+        tertiary_limit = int((await self.config_repo.get_config("tertiary_limit")).value)
+        selection_mode = (await self.config_repo.get_config("selection_mode")).value.lower()
+
         splits = {
             "Primary": [s for s in systems if s.priority == "Primary"],
             "Secondary": [s for s in systems if s.priority == "Secondary"],
             "Tertiary": [s for s in systems if s.priority == "Tertiary"],
         }
+
+        # Apply selection_mode sorting before limiting and rotation
+        if selection_mode == "oldest_first":
+            # Sort ascending by added_at; treat 0 as very large (sort last)
+            def sort_key(s: ScoutSystem) -> int:
+                return s.added_at if s.added_at != 0 else 2**62
+
+            for priority, bucket in splits.items():
+                splits[priority] = sorted(bucket, key=sort_key)
+        # For 'absolute', keep the insertion order returned by get_all_tracked_systems
+
+        # Apply per-priority limits (0 = no limit)
+        if primary_limit > 0:
+            splits["Primary"] = splits["Primary"][:primary_limit]
+        if secondary_limit > 0:
+            splits["Secondary"] = splits["Secondary"][:secondary_limit]
+        if tertiary_limit > 0:
+            splits["Tertiary"] = splits["Tertiary"][:tertiary_limit]
 
         # Apply rotation logic
         every_other_day = list(self.split(splits["Secondary"], 2))
@@ -151,20 +176,17 @@ class SystemsPostingService:
         tertiary_today = every_third_day[daily_sequence % 3] if every_third_day else []
 
         # Add carryover systems
+        carryover_secondary = []
+        carryover_tertiary = []
+        for s in carryover:
+            if s.priority == "Secondary" and s.system not in [item.system for item in secondary_today]:
+                carryover_secondary.append(s)
+            elif s.priority == "Tertiary" and s.system not in [item.system for item in tertiary_today]:
+                carryover_tertiary.append(s)
         return {
             "Primary": splits["Primary"],
-            "Secondary": splits["Secondary"]
-            + [
-                s
-                for s in carryover
-                if s.priority == "Secondary" and s.system not in [item.system for item in secondary_today]
-            ],
-            "Tertiary": splits["Tertiary"]
-            + [
-                s
-                for s in carryover
-                if s.priority == "Tertiary" and s.system not in [item.system for item in tertiary_today]
-            ],
+            "Secondary": secondary_today + carryover_secondary,
+            "Tertiary": tertiary_today + carryover_tertiary,
         }
 
     def _get_daily_sequence(self) -> int:

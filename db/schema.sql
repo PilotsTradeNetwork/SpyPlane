@@ -84,3 +84,9 @@ ON CONFLICT DO NOTHING;
 INSERT INTO configuration (name, value, timestamp)
 VALUES ('daily_interval_hours', '12', 1658255653)
 ON CONFLICT DO NOTHING;
+
+INSERT INTO configuration (name, value, timestamp) VALUES ('primary_limit',   '0', 1655665882) ON CONFLICT DO NOTHING;
+INSERT INTO configuration (name, value, timestamp) VALUES ('secondary_limit',  '0', 1655665882) ON CONFLICT DO NOTHING;
+INSERT INTO configuration (name, value, timestamp) VALUES ('tertiary_limit',   '0', 1655665882) ON CONFLICT DO NOTHING;
+INSERT INTO configuration (name, value, timestamp) VALUES ('selection_mode',   'oldest_first', 1655665882) ON CONFLICT DO NOTHING;
+INSERT INTO configuration (name, value, timestamp) VALUES ('tracked_changed_at', '0', 1655665882) ON CONFLICT DO NOTHING;
