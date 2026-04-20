@@ -3,6 +3,7 @@ import csv
 import io
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Literal
 
 import discord
 from discord import Interaction, TextStyle, app_commands
@@ -32,7 +33,7 @@ faction = app_commands.Group(name="faction", description="Faction BGS management
     name="Name of the config: Can be `interval_hours` or `carryover` ",
     value="Value: For `interval_hours` should be a number 1 to 24. For `carryover` it should be `true` or `false`",
 )
-async def faction_config(interaction: Interaction, name: str, value: str):
+async def faction_config(interaction: Interaction, name: Literal["interval_hours", "carryover"], value: str):
     """Assign standard operating protocols"""
     log(f"User {interaction.user.name} is attempting to set config {name} to {value}: {__version__}.")
     message = await ConfigService().update_config(name, value)
@@ -154,59 +155,6 @@ async def faction_operations_report(interaction: Interaction):
             description="Asset compromised. Report failed. Escalate to flight command.",
         )
         await interaction.followup.send(embed=embed)
-
-
-@faction.command(name="remove")
-@app_commands.describe(system_names="Comma-separated list of system names to remove from tracking (max 10 systems)")
-async def faction_remove(interaction: Interaction, system_names: str):
-    """Remove systems from faction scouting tracking (single or multiple systems)"""
-    await interaction.response.defer()
-    repo = SystemsRepository()
-    try:
-        system_list = [name.strip() for name in system_names.split(",") if name.strip()]
-        if len(system_list) == 0:
-            await interaction.followup.send("❌ No valid systems found in the list.")
-            return
-        if len(system_list) > 10:
-            await interaction.followup.send("❌ Maximum 10 systems allowed per command.")
-            return
-        successful, failed = await repo.bulk_remove_systems(system_list)
-        if successful > 0:
-            message = f"✅ Removed {successful} systems from tracking"
-            if failed > 0:
-                message += f" ({failed} not found)"
-            await interaction.followup.send(message)
-        else:
-            await interaction.followup.send("❌ No systems were removed.")
-    except Exception as e:
-        log(f"Error processing system names: {e}")
-        await interaction.followup.send("❌ Error processing system names.")
-
-
-@faction.command(name="removeall")
-@app_commands.describe(priority="Priority level to remove all systems from")
-@app_commands.choices(
-    priority=[
-        Choice(name="Primary", value="Primary"),
-        Choice(name="Secondary", value="Secondary"),
-        Choice(name="Tertiary", value="Tertiary"),
-    ]
-)
-async def faction_removeall(interaction: Interaction, priority: str):
-    """Remove all systems of a specific priority from tracking"""
-    await interaction.response.defer()
-    repo = SystemsRepository()
-    try:
-        deleted_count = await repo.remove_all_by_priority(priority)
-        if deleted_count > 0:
-            await interaction.followup.send(
-                f"✅ Removed all **{priority}** systems from tracking ({deleted_count} systems deleted)"
-            )
-        else:
-            await interaction.followup.send(f"No **{priority}** systems found in tracking")
-    except Exception as e:
-        log(f"Error removing all {priority} systems: {e}")
-        await interaction.followup.send(f"❌ Error removing all **{priority}** systems from tracking")
 
 
 @faction.command(name="track")
