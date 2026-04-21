@@ -29,11 +29,21 @@ from ptn.spyplane.services.systems_posting_service import SystemsPostingService
 faction = app_commands.Group(name="faction", description="Faction BGS management commands")
 
 
+async def faction_config_value_autocomplete(interaction: Interaction, current: str) -> list[app_commands.Choice[str]]:
+    choices: dict[str, tuple[str, ...]] = {
+        "selection_mode": ("oldest_first", "absolute"),
+        "carryover": ("true", "false"),
+    }
+    options = choices.get(interaction.namespace.name, ())
+    return [app_commands.Choice(name=v, value=v) for v in options if not current or current.lower() in v]
+
+
 @faction.command(name="config")
 @app_commands.describe(
     name="Name of the config: Can be `interval_hours` or `carryover` ",
-    value="Value: For `interval_hours` should be a number 1 to 24. For `carryover` it should be `true` or `false`",
+    value="Value: For `interval_hours` should be a number 1 to 24. For limits, a positive integer.",
 )
+@app_commands.autocomplete(value=faction_config_value_autocomplete)  # type: ignore[arg-type]
 async def faction_config(
     interaction: Interaction,
     name: Literal[
