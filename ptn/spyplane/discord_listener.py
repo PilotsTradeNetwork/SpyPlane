@@ -2,7 +2,7 @@ import asyncio
 import os
 import random
 
-from discord import Embed, Interaction, Message, RawReactionActionEvent, app_commands
+from discord import Embed, Interaction, Message, app_commands
 from discord.app_commands import AppCommandError
 
 from ptn.spyplane._metadata import __version__
@@ -144,30 +144,6 @@ async def on_message(message: Message):
         log_exception("on_message", e)
         # Still process commands even if there's an error
         await bot.process_commands(message)
-
-
-@bot.event
-async def on_raw_reaction_add(payload: RawReactionActionEvent):
-    try:
-        if payload.channel_id != BOT_DEV_CHANNEL:
-            # log(f"Not the right channel {payload.channel_id}")
-            return
-        if payload.user_id == bot.user.id:
-            # log(f"Not the right user {payload.user_id}")
-            return
-        if str(payload.emoji) != str(bot.emoji_bullseye):
-            log(
-                f"Not the target emoji {payload.emoji} {bot.emoji_bullseye} {payload.emoji.name} {bot.emoji_bullseye.name}"
-            )
-            return
-        message: Message = await bot.channel.fetch_message(payload.message_id)
-        asyncio.create_task(  # noqa: RUF006
-            record_service.record_reaction(message.content, payload.member.name, payload.member.id)
-        )  # Another option is to try a Queue
-        if not message.pinned:  # prevent deleting pinned messages with reactions in the channel
-            await message.delete()
-    except Exception as e:
-        log_exception("on_raw_reaction_add", e)
 
 
 @bot.tree.error

@@ -135,25 +135,53 @@ class EddnListenerThread(threading.Thread):
             # Get message_id from scout_systems_posted BEFORE recording (record_reaction removes it)
             message_id = await self.systems_repo.get_message_id(system_name)
 
-            # Record the scout with EDDN as username and 0 as userid
-            await self.record_service.record_reaction(system_name, "EDDN", 0)
+            # Determine scout attribution — default to EDDN, but check for human reactors first
+            scout_username = "EDDN"
+            scout_userid = 0
 
-            # Delete the Discord message if we have message_id
             bot = get_bot()
             if message_id and bot.channel:
                 try:
                     message = await bot.channel.fetch_message(message_id)
+
+                    # Look for human users who reacted with the bullseye emoji
+                    users_reacted = []
+                    for reaction in message.reactions:
+                        if str(reaction.emoji) == str(bot.emoji_bullseye):
+                            users_reacted.extend([user async for user in reaction.users() if user.id != bot.user.id])
+                            break
+
+                    if len(users_reacted) > 1:
+                        log(
+                            f"WARNING: Multiple users reacted for system {system_name}: "
+                            f"{[u.name for u in users_reacted]} — attributing to first: {users_reacted[0].name}"
+                        )
+                    if users_reacted:
+                        scout_username = users_reacted[0].name
+                        scout_userid = users_reacted[0].id
+                        log(f"Attributing EDDN scout for {system_name} to human reactor {scout_username}")
+                    else:
+                        log(f"No human reactors found for system {system_name}, attributing to EDDN")
+
+                    # Record the scout
+                    await self.record_service.record_reaction(system_name, scout_username, scout_userid)
+
                     if not message.pinned:
                         await message.delete()
                         log(f"Deleted Discord message {message_id} for system {system_name} from EDDN event")
                     else:
                         log(f"Message {message_id} is pinned, not deleting")
                 except Exception as e:
-                    log(f"Error deleting message {message_id} for system {system_name}: {e}")
-            elif not message_id:
-                log(f"No message_id found for system {system_name} in scout_systems_posted")
-            elif not bot.channel:
-                log(f"Bot channel not available for deleting message for system {system_name}")
+                    log(f"Error processing message {message_id} for system {system_name}: {e}")
+                    # Still record the scout even if message handling failed
+                    await self.record_service.record_reaction(system_name, scout_username, scout_userid)
+            else:
+                # No message to check — record with EDDN attribution
+                await self.record_service.record_reaction(system_name, scout_username, scout_userid)
+                if not message_id:
+                    log(f"No message_id found for system {system_name} in scout_systems_posted")
+                elif not bot.channel:
+                    log(f"Bot channel not available for deleting message for system {system_name}")
         except Exception as e:
             log_exception("Error handling EDDN scout", e)
 
