@@ -9,20 +9,13 @@ from discord.ext.commands import Bot, when_mentioned_or
 
 if TYPE_CHECKING:
     from asyncio import Lock
-    from threading import Thread
 
-    from discord.abc import GuildChannel, PrivateChannel
+    from discord.abc import GuildChannel
 
 from discord.ext.prometheus import PrometheusCog
 
 from ptn.spyplane.bot_registry import register_bot
-from ptn.spyplane.constants import (
-    DB_PATH,
-    EDDN_URL,
-    GUILD_ID,
-    TOKEN,
-    log,
-)
+from ptn.spyplane.constants import DB_PATH, EDDN_URL, GUILD_ID, TOKEN, log
 
 
 class SpyPlane(Bot):
@@ -33,8 +26,8 @@ class SpyPlane(Bot):
         self.db: Connection | None = None
         self.lock: Lock | None = None
         self.emoji_bullseye: Emoji | None = None
-        self.channel: GuildChannel | Thread | PrivateChannel | None = None
-        self.report_channel: GuildChannel | Thread | PrivateChannel | None = None
+        self.channel: GuildChannel | None = None
+        self.report_channel: GuildChannel | None = None
 
     async def setup_hook(self):
         discord_server_object = Object(id=GUILD_ID)

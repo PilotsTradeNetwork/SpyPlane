@@ -187,7 +187,7 @@ class ScoutingProgressService:
         """Search the channel's pinned messages for a bot-authored embed matching *title*."""
         try:
             bot = get_bot()
-            pins: list[discord.Message] = await channel.pins()
+            pins: list[discord.abc.PinnedMessage] = await channel.pins()
             for msg in pins:
                 if msg.author.id != bot.user.id:
                     continue
