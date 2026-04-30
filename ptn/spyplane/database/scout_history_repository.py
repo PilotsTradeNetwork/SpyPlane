@@ -18,6 +18,10 @@ purge_scout_history = """
 delete from scout_history
 """
 
+recently_scouted_systems = """
+select distinct system_name from scout_history where timestamp >= ?
+"""
+
 
 class ScoutHistoryRepository(BaseRepository):
     async def record_scout(self, system: ScoutSystem, username, userid, ts=None):
@@ -49,6 +53,12 @@ class ScoutHistoryRepository(BaseRepository):
         async with self.db().execute(query, parameters=params) as cur:
             rows = await cur.fetchall()
             return [ScoutHistory(r[0], r[1], r[2], r[3], datetime.fromtimestamp(r[4], timezone.utc)) for r in rows]
+
+    async def get_systems_scouted_since(self, cutoff: float) -> set[str]:
+        """Return the set of system names that have a scout record at or after cutoff (UTC timestamp)."""
+        async with self.db().execute(recently_scouted_systems, parameters=[cutoff]) as cur:
+            rows = await cur.fetchall()
+            return {r[0] for r in rows}
 
     async def purge_scout_systems_history(self) -> None:
         await self.db().execute(purge_scout_history)

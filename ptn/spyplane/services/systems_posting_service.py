@@ -1,18 +1,20 @@
-import datetime
+from datetime import UTC, datetime, timedelta
 
 import discord.message
 
 from ptn.spyplane.bot_registry import get_bot
 from ptn.spyplane.constants import FACTION_SCOUT_ROLE_ID, log
 from ptn.spyplane.database.config_repository import ConfigRepository
+from ptn.spyplane.database.scout_history_repository import ScoutHistoryRepository
 from ptn.spyplane.database.systems_repository import SystemsRepository
 from ptn.spyplane.models.scout_system import ScoutSystem
 
 
 class SystemsPostingService:
-    def __init__(self, repo=None, config_repo=None):
+    def __init__(self, repo=None, config_repo=None, history_repo=None):
         self.repo = repo or SystemsRepository()
         self.config_repo = config_repo or ConfigRepository()
+        self.history_repo = history_repo or ScoutHistoryRepository()
         self.start_date = datetime.date(2022, 6, 18)  # start day randomly chosen for the daily sequence
 
     async def publish_systems_to_scout(self):
@@ -145,10 +147,15 @@ class SystemsPostingService:
         tertiary_limit = int((await self.config_repo.get_config("tertiary_limit")).value)
         selection_mode = (await self.config_repo.get_config("selection_mode")).value.lower()
 
+        # Determine recently-scouted systems to hide from the list
+        now = datetime.now(UTC)
+        scouted_1d = await self.history_repo.get_systems_scouted_since((now - timedelta(days=1)).timestamp())
+        scouted_2d = await self.history_repo.get_systems_scouted_since((now - timedelta(days=2)).timestamp())
+
         splits = {
             "Primary": [s for s in systems if s.priority == "Primary"],
-            "Secondary": [s for s in systems if s.priority == "Secondary"],
-            "Tertiary": [s for s in systems if s.priority == "Tertiary"],
+            "Secondary": [s for s in systems if s.priority == "Secondary" and s.system not in scouted_1d],
+            "Tertiary": [s for s in systems if s.priority == "Tertiary" and s.system not in scouted_2d],
         }
 
         # Apply selection_mode sorting before limiting and rotation
