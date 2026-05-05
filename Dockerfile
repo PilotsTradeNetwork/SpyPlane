@@ -1,4 +1,4 @@
-FROM python:3.10-slim-bookworm
+FROM python:3.13-slim-bookworm
 RUN apt update
 RUN apt-get install -qq -y jq sqlite3 p7zip
 RUN mkdir /app

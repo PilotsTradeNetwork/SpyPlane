@@ -1,25 +1,25 @@
 [project]
 name = "ptn-spyplane"
-version = "0.1.0"
+version = "2.0.0"
 description = "PTN Spy Plane"
 authors = [
-    { name = "PTN Devs" },
+    { name = "zaszrespawned" },
+    { name = "IndorilReborn" },
 ]
 dependencies = [
-    "python-dotenv==0.21.1",
-    "discord-py==2.6.3",
-    "aiosqlite==0.21.0",
-    "aiocron==1.8",
-    "jq==1.10.0",
-    "pytz==2022.7.1",
-    "aiohttp==3.12.15",
-    "discord-ext-prometheus==0.2.1",
-    "httpx==0.28.1",
-    "pyzmq>=26.0.0",
-    "simplejson>=3.19.3",
+    "python-dotenv~=1.2",
+    "discord-py~=2.7",
+    "aiosqlite~=0.22",
+    "aiocron~=2.0",
+    "pytz~=2026.2",
+    "aiohttp~=3.13",
+    "discord-ext-prometheus~=0.2",
+    "httpx~=0.28",
+    "pyzmq~=27.0",
+    "simplejson~=4.1",
 ]
 
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 
 [project.optional-dependencies]
 dev = [
