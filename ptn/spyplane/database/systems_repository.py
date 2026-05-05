@@ -60,7 +60,7 @@ class SystemsRepository(BaseRepository):
             row = await cur.fetchone()
             return row and row[0] and row[0] == system
 
-    async def get_carryover_systems(self) -> list[ScoutSystem]:
+    async def get_posted_systems(self) -> list[ScoutSystem]:
         return await self.get_systems(get_post_systems)
 
     async def get_message_id(self, system_name: str) -> int | None:

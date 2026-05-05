@@ -32,7 +32,6 @@ faction = app_commands.Group(name="faction", description="Faction BGS management
 async def faction_config_value_autocomplete(interaction: Interaction, current: str) -> list[app_commands.Choice[str]]:
     choices: dict[str, tuple[str, ...]] = {
         "selection_mode": ("oldest_first", "absolute"),
-        "carryover": ("true", "false"),
     }
     options = choices.get(interaction.namespace.name, ())
     return [app_commands.Choice(name=v, value=v) for v in options if not current or current.lower() in v]
@@ -40,7 +39,7 @@ async def faction_config_value_autocomplete(interaction: Interaction, current: s
 
 @faction.command(name="config")
 @app_commands.describe(
-    name="Name of the config: Can be `interval_hours` or `carryover` ",
+    name="Name of the config: Can be `interval_hours`, `selection_mode`, or a limit config",
     value="Value: For `interval_hours` should be a number 1 to 24. For limits, a positive integer.",
 )
 @app_commands.autocomplete(value=faction_config_value_autocomplete)  # type: ignore[arg-type]
@@ -48,7 +47,6 @@ async def faction_config(
     interaction: Interaction,
     name: Literal[
         "interval_hours",
-        "carryover",
         "primary_limit",
         "secondary_limit",
         "tertiary_limit",

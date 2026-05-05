@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Faction Tracking system allows administrators to manage which star systems are being monitored for faction scouting operations. Systems can be added with different priority levels (Primary, Secondary, Tertiary) and then posted to the scout channel for pilots to visit. The system includes validation to ensure only valid star systems can be tracked, and supports bulk operations for efficient management.
+The Faction Tracking system allows administrators to manage which star systems are being monitored for faction scouting operations. Systems are organised into three priority levels (Primary, Secondary, Tertiary) and posted to the scout channel for pilots to visit. The full tracking list is managed through a single modal interface (`/faction track`), which replaces the entire list each time it is submitted. The system validates system names against the local Elite Dangerous database and optionally cross-checks unknown names with EDSM.
 
 ## Database Structure
 
@@ -22,103 +22,51 @@ The Faction Tracking system allows administrators to manage which star systems a
 
 ## Commands
 
-### `/faction_track`
-Adds one or more star systems to the tracking list with a specified priority level.
+### `/faction track`
+Sets the full list of systems to track for faction scouting. Opens a modal with three text fields (one per priority level). The submitted list **replaces the entire current tracking list**.
 
-**Parameters:**
-- **`system_names`** (required): Comma-separated list of system names to track. Maximum 10 systems per command.
-- **`priority`** (required): Priority level for all systems in the list. Options:
-  - **Primary**: Highest priority systems (posted every day)
-  - **Secondary**: Medium priority systems (rotated every other day)
-  - **Tertiary**: Lower priority systems (rotated every third day)
+**Modal Fields:**
+- **Primary Systems**: One system name per line
+- **Secondary Systems**: One system name per line
+- **Tertiary Systems**: One system name per line
+
+All fields are optional. Leaving a field empty clears all systems of that priority. The modal is pre-populated with the current tracked systems so you can edit in-place.
 
 **Validation:**
-- All system names must exist in the `systems` table (validated against Elite Dangerous system database)
-- Maximum 10 systems per command
-- System names are trimmed of whitespace
-- Invalid systems are reported before any systems are added
+- System names are first checked against the local `systems` table
+- Names not found locally are bulk-fetched from EDSM as a fallback
+- Any name not found in either source causes the entire submission to be rejected with the unknown names listed
+- Warnings (non-blocking) are shown for:
+  - Non-Tertiary systems more than 500 ly from the bubble
+  - Systems that may not be populated
 
 **Behavior:**
-- All systems in the list are assigned the same priority level
-- Systems are added with the current timestamp
-- The Discord username of the command executor is recorded as `added_by`
-- Duplicate system names are handled (won't add if already exists)
-- Returns count of successful and failed additions
+- On successful submission the entire `scout_systems` table is replaced atomically
+- `added_by` is set to the submitting user's Discord username
+- `added_at` is set to the current Unix timestamp for each system
+- The `tracked_changed_at` config value is updated to the current time
 
-**Example:**
+**Example response:**
 ```
-/faction_track system_names:"Kambarci, LHS 3447, Sol" priority:Primary
-→ ✅ Added 3 systems to tracking with **Primary** priority
-```
-
-**Error Cases:**
-- Invalid system names: `❌ Invalid systems found: InvalidSystem, AnotherInvalid`
-- Too many systems: `❌ Maximum 10 systems allowed per command.`
-- Empty list: `❌ No valid systems found in the list.`
-
----
-
-### `/faction_remove`
-Removes one or more star systems from the tracking list.
-
-**Parameters:**
-- **`system_names`** (required): Comma-separated list of system names to remove. Maximum 10 systems per command.
-
-**Behavior:**
-- Removes systems from the `scout_systems` table
-- Systems that don't exist are silently skipped (counted as failed)
-- Returns count of successful removals and systems not found
-- Updates the internal cache after removal
-
-**Example:**
-```
-/faction_remove system_names:"Kambarci, LHS 3447"
-→ ✅ Removed 2 systems from tracking
+✅ Saved 8 tracked system(s):
+- 3 Primary
+- 3 Secondary
+- 2 Tertiary
 ```
 
-**Error Cases:**
-- Too many systems: `❌ Maximum 10 systems allowed per command.`
-- Empty list: `❌ No valid systems found in the list.`
-- No systems removed: `❌ No systems were removed.`
+**To remove systems:** re-open the modal, delete the unwanted lines, and resubmit.
 
-**Partial Success:**
+**To clear a priority entirely:** leave that field blank and resubmit.
+
+**Error case:**
 ```
-/faction_remove system_names:"Kambarci, InvalidSystem"
-→ ✅ Removed 1 systems from tracking (1 not found)
+## Errors
+System(s) not found: InvalidSystem, Typo System
 ```
 
 ---
 
-### `/faction_removeall`
-Removes all systems of a specific priority level from tracking.
-
-**Parameters:**
-- **`priority`** (required): Priority level to remove all systems from. Options:
-  - **Primary**: Removes all Primary priority systems
-  - **Secondary**: Removes all Secondary priority systems
-  - **Tertiary**: Removes all Tertiary priority systems
-
-**Behavior:**
-- Removes all systems matching the specified priority
-- Returns the count of systems deleted
-- Updates the internal cache after removal
-- Safe to run even if no systems of that priority exist
-
-**Example:**
-```
-/faction_removeall priority:Secondary
-→ ✅ Removed all **Secondary** systems from tracking (15 systems deleted)
-```
-
-**No Systems Found:**
-```
-/faction_removeall priority:Tertiary
-→ ℹ️ No **Tertiary** systems found in tracking
-```
-
----
-
-### `/faction_list`
+### `/faction list`
 Exports all currently tracked systems to a CSV file.
 
 **Parameters:**
@@ -151,13 +99,13 @@ Exported 25 tracked systems to CSV file
 
 **No Systems Tracked:**
 ```
-/faction_list
+/faction list
 → 📋 No systems are currently being tracked
 ```
 
 ---
 
-### `/faction_launch`
+### `/faction launch`
 Posts all tracked systems to the scout channel, organized by priority.
 
 **Parameters:**
@@ -165,12 +113,12 @@ Posts all tracked systems to the scout channel, organized by priority.
 
 **Behavior:**
 1. **Fetches tracked systems** from the database
-2. **Checks carryover setting** - if enabled, includes systems from previous postings
-3. **Purges the scout channel** - deletes all non-pinned messages
-4. **Applies rotation logic**:
-   - **Primary**: All systems posted every day
-   - **Secondary**: Rotated every other day (split into 2 groups)
-   - **Tertiary**: Rotated every third day (split into 3 groups)
+2. **Purges the scout channel** - deletes all non-pinned messages
+3. **Filters recently scouted systems**:
+   - Secondary systems scouted within the last 1 day are hidden
+   - Tertiary systems scouted within the last 2 days are hidden
+   - Primary systems are always shown
+4. **Sorts and limits** by priority using the configured `selection_mode` and per-priority limits
 5. **Posts systems** to the scout channel:
    - Each system posted as a separate message
    - Each message gets a reaction emoji (bullseye/target)
@@ -178,15 +126,13 @@ Posts all tracked systems to the scout channel, organized by priority.
 6. **Stores message IDs** in `scout_systems_posted` table for tracking
 7. **Sends notification** to the Faction Scout role with link to first message
 
-**Rotation Logic:**
-- Uses a daily sequence number based on days since June 18, 2022
-- Secondary systems: `daily_sequence % 2` determines which half is posted
-- Tertiary systems: `daily_sequence % 3` determines which third is posted
-- Ensures systems are rotated fairly over time
+**Selection Modes (`selection_mode` config):**
+- `oldest_first`: Systems with the earliest `added_at` timestamp are posted first; systems with `added_at = 0` sort last
+- `absolute`: Systems are posted in insertion order as returned from the database
 
-**Carryover:**
-- If carryover is enabled (configured via `/faction_config`), systems from `scout_systems_posted` that weren't in today's rotation are added back
-- Prevents systems from being missed due to rotation
+**Per-priority Limits:**
+- `primary_limit`, `secondary_limit`, `tertiary_limit` cap how many systems are posted per priority
+- A limit of `0` means no cap - all eligible systems are posted
 
 **Channel Format:**
 ```
@@ -346,67 +292,50 @@ The EDDN (Elite Dangerous Data Network) listener provides automated scouting cap
 
 ### Setting Up a New Tracking List
 
-1. **Add Primary systems:**
+1. **Open the tracking modal:**
    ```
-   /faction_track system_names:"Kambarci, LHS 3447, Sol" priority:Primary
-   ```
-
-2. **Add Secondary systems:**
-   ```
-   /faction_track system_names:"System A, System B, System C" priority:Secondary
+   /faction track
    ```
 
-3. **Add Tertiary systems:**
-   ```
-   /faction_track system_names:"System X, System Y" priority:Tertiary
-   ```
+2. **Fill in each priority field** - one system name per line in each text box.
+
+3. **Submit** - the bot validates all names and confirms with a count summary.
 
 4. **Verify the list:**
    ```
-   /faction_list
+   /faction list
    → Download CSV to review all tracked systems
    ```
 
 5. **Launch the scout list:**
    ```
-   /faction_launch
+   /faction launch
    → Systems posted to scout channel
    ```
 
 ### Updating Tracked Systems
 
-1. **Remove specific systems:**
+1. **Open the modal** - it is pre-populated with the current list:
    ```
-   /faction_remove system_names:"Old System, Another Old System"
-   ```
-
-2. **Add replacement systems:**
-   ```
-   /faction_track system_names:"New System, Another New System" priority:Primary
+   /faction track
    ```
 
-3. **Reload the list:**
+2. **Edit the text fields** - add, remove, or move systems between priority fields as needed.
+
+3. **Submit** - the full list is replaced atomically.
+
+4. **Reload the scout channel:**
    ```
-   /faction_launch
+   /faction launch
    → Updated list posted
    ```
 
-### Bulk Priority Changes
+### Changing a System's Priority
 
-1. **Remove all Secondary systems:**
-   ```
-   /faction_removeall priority:Secondary
-   ```
-
-2. **Re-add with different priority:**
-   ```
-   /faction_track system_names:"System1, System2, System3" priority:Primary
-   ```
-
-3. **Launch updated list:**
-   ```
-   /faction_launch
-   ```
+1. Open `/faction track` - the modal shows the current list.
+2. Delete the system from its current priority field.
+3. Add it to the desired priority field.
+4. Submit. The system is re-added with the new priority and a fresh `added_at` timestamp.
 
 ---
 
@@ -430,12 +359,10 @@ The EDDN (Elite Dangerous Data Network) listener provides automated scouting cap
 - Message IDs are stored in `scout_systems_posted` for tracking
 - Pinned messages are preserved during channel purge
 
-### Rotation Algorithm
-- Daily sequence calculated from days since June 18, 2022
-- Secondary systems split into 2 equal groups (or as close as possible)
-- Tertiary systems split into 3 equal groups (or as close as possible)
-- Rotation ensures fair distribution over time
-- Carryover systems added back if they weren't in today's rotation
+### Selection and Limiting
+- Systems are sorted by `selection_mode`: `oldest_first` (by `added_at` timestamp) or `absolute` (insertion order)
+- Per-priority limits (`primary_limit`, `secondary_limit`, `tertiary_limit`) cap the number of systems posted
+- Recently scouted systems are automatically hidden: Secondary within 1 day, Tertiary within 2 days
 
 ### Bulk Operations
 - Maximum 10 systems per command for safety and performance
@@ -460,9 +387,7 @@ The EDDN (Elite Dangerous Data Network) listener provides automated scouting cap
 
 5. **Launch Timing**: Run `/faction_launch` after making changes to ensure the scout channel reflects current priorities.
 
-6. **Rotation Awareness**: Understand that Secondary and Tertiary systems rotate, so not all will appear every day.
-
-7. **Carryover Configuration**: Configure carryover behavior based on your operational needs using `/faction_config`.
+6. **Limit Tuning**: Use `primary_limit`, `secondary_limit`, and `tertiary_limit` to control how many systems appear per priority each posting.
 
 ---
 
@@ -474,40 +399,34 @@ The EDDN (Elite Dangerous Data Network) listener provides automated scouting cap
 - Check for typos or extra spaces
 
 **Q: Systems not appearing after launch?**
-- Check the priority level - Secondary and Tertiary systems rotate
-- Verify systems were successfully added using `/faction_list`
-- Check if carryover is enabled and affecting rotation
+- Verify systems were successfully added using `/faction list`
+- Secondary/Tertiary systems scouted recently are automatically hidden (1d and 2d respectively)
+- Check whether a per-priority limit is set too low via `/faction config_dump`
 
-**Q: Too many systems to manage?**
-- Use `/faction_removeall` to clear a priority level
-- Export with `/faction_list` to review in a spreadsheet
-- Consider reorganizing priorities
+**Q: Too many systems appearing?**
+- Use per-priority limits: `/faction config name:secondary_limit value:10`
+- To reduce the tracked list, open `/faction track`, remove lines from the relevant field, and resubmit
+- Export with `/faction list` to review in a spreadsheet
 
 **Q: Want to change a system's priority?**
-- Remove the system: `/faction_remove system_names:"SystemName"`
-- Re-add with new priority: `/faction_track system_names:"SystemName" priority:NewPriority`
+- Open `/faction track`, move the system name from one priority field to another, and resubmit
 
 **Q: Channel not purging correctly?**
 - Pinned messages are never deleted
 - Check bot permissions in the scout channel
 - Verify the channel ID is correctly configured
 
-**Q: Rotation seems wrong?**
-- Rotation is based on days since June 18, 2022
-- Secondary rotates every 2 days, Tertiary every 3 days
-- Use `/faction_list` to see all tracked systems regardless of rotation
-
-**Q: Need to see what was posted previously?**
-- Check `scout_systems_posted` table for systems that were posted
-- Message IDs are stored for reference
-- Carryover uses this table to restore systems
+**Q: Want to change the order systems are posted?**
+- Set `selection_mode` to `oldest_first` to surface the longest-tracked systems first
+- Set `selection_mode` to `absolute` to use insertion order
+- Use `/faction list` to export and review all tracked systems
 
 ---
 
 ## Related Commands
 
-- **`/faction_config`**: Configure system settings like carryover behavior
-- **`/faction_config_dump`**: View current configuration values
+- **`/faction config`**: Configure system settings like `selection_mode` and per-priority limits
+- **`/faction config_dump`**: View current configuration values
 
 ---
 

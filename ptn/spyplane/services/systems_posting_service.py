@@ -15,22 +15,16 @@ class SystemsPostingService:
         self.repo = repo or SystemsRepository()
         self.config_repo = config_repo or ConfigRepository()
         self.history_repo = history_repo or ScoutHistoryRepository()
-        self.start_date = datetime.date(2022, 6, 18)  # start day randomly chosen for the daily sequence
 
     async def publish_systems_to_scout(self):
         bot = get_bot()
         tracked_systems = await self.repo.get_all_tracked_systems()
-        should_carryover = (await self.config_repo.get_config("carryover")).value.lower() in ["true", "yes", "y", "t"]
-        carryover = []
-        if should_carryover:
-            carryover = await self.repo.get_carryover_systems()
 
         # Purge channel and posted systems table so totals reflect only what is currently posted
         await self.repo.purge_posted_systems()
         await self._purge_channel()
 
-        daily_sequence = self._get_daily_sequence()
-        splits = await self.split_systems_by_priority(tracked_systems, daily_sequence, carryover)
+        splits = await self.split_systems_by_priority(tracked_systems)
 
         # Log counts before posting
         log(
@@ -91,7 +85,6 @@ class SystemsPostingService:
             return None
 
         first_message = None
-        # Log the actual count that will be posted after rotation
         log(f"Posting {len(systems_for_priority)} {priority_string} systems")
 
         # Send header for non-Primary priorities
@@ -107,7 +100,7 @@ class SystemsPostingService:
             if not first_message:
                 first_message = message
 
-        # Write to database with message IDs (only the systems we're actually posting)
+        # Write to database with message IDs
         await self.repo.write_system_to_post(systems_for_priority, message_ids)
 
         return first_message
@@ -138,8 +131,6 @@ class SystemsPostingService:
     async def split_systems_by_priority(
         self,
         systems: list[ScoutSystem],
-        daily_sequence: int,
-        carryover: list[ScoutSystem],
     ) -> dict[str, list[ScoutSystem]]:
         # Read per-priority limits and selection mode from config
         primary_limit = int((await self.config_repo.get_config("primary_limit")).value)
@@ -158,7 +149,7 @@ class SystemsPostingService:
             "Tertiary": [s for s in systems if s.priority == "Tertiary" and s.system not in scouted_2d],
         }
 
-        # Apply selection_mode sorting before limiting and rotation
+        # Apply selection_mode sorting before limiting
         if selection_mode == "oldest_first":
             # Sort ascending by added_at; treat 0 as very large (sort last)
             def sort_key(s: ScoutSystem) -> int:
@@ -176,31 +167,4 @@ class SystemsPostingService:
         if tertiary_limit > 0:
             splits["Tertiary"] = splits["Tertiary"][:tertiary_limit]
 
-        # Apply rotation logic
-        every_other_day = list(self.split(splits["Secondary"], 2))
-        every_third_day = list(self.split(splits["Tertiary"], 3))
-        secondary_today = every_other_day[daily_sequence % 2] if every_other_day else []
-        tertiary_today = every_third_day[daily_sequence % 3] if every_third_day else []
-
-        # Add carryover systems
-        carryover_secondary = []
-        carryover_tertiary = []
-        for s in carryover:
-            if s.priority == "Secondary" and s.system not in [item.system for item in secondary_today]:
-                carryover_secondary.append(s)
-            elif s.priority == "Tertiary" and s.system not in [item.system for item in tertiary_today]:
-                carryover_tertiary.append(s)
-        return {
-            "Primary": splits["Primary"],
-            "Secondary": secondary_today + carryover_secondary,
-            "Tertiary": tertiary_today + carryover_tertiary,
-        }
-
-    def _get_daily_sequence(self) -> int:
-        today = datetime.datetime.now(datetime.timezone.utc).date()
-        return (today - self.start_date).days
-
-    @staticmethod  # https://stackoverflow.com/questions/2130016/splitting-a-list-into-n-parts-of-approximately-equal-length
-    def split(array, split_size):
-        k, m = divmod(len(array), split_size)
-        return (array[i * k + min(i, m) : (i + 1) * k + min(i + 1, m)] for i in range(split_size))
+        return splits

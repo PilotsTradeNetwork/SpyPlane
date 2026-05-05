@@ -48,7 +48,7 @@ class ScoutingProgressService:
             return
 
         # Determine the cutoff timestamp: earliest added_at among posted systems
-        posted_systems = await self.repo.get_carryover_systems()
+        posted_systems = await self.repo.get_posted_systems()
         if not posted_systems:
             cutoff = 0
         else:
