@@ -31,7 +31,7 @@ class SystemsPostingService:
             f"Posting systems - Primary: {len(splits['Primary'])}, Secondary: {len(splits['Secondary'])}, Tertiary: {len(splits['Tertiary'])}"
         )
 
-        await self.post_list(splits, "Primary")
+        first_message = await self.post_list(splits, "Primary")
         await self.post_list(splits, "Secondary")
         await self.post_list(splits, "Tertiary")
 
@@ -42,45 +42,7 @@ class SystemsPostingService:
         bot = get_bot()
         systems_for_priority = splits[priority_string]
 
-        if len(systems_for_priority):
-            # Apply daily rotation logic based on priority
-            daily_sequence = self._get_daily_sequence()
-
-            if priority_string == "Primary":
-                # Primary: Post all systems (no rotation)
-                systems_to_post = systems_for_priority
-            elif priority_string == "Secondary":
-                # Secondary: Split into 2 groups, rotate every other day
-                every_other_day = list(self.split(systems_for_priority, 2))
-                systems_to_post = (
-                    every_other_day[daily_sequence % 2] if every_other_day else []
-                )
-            elif priority_string == "Tertiary":
-                # Tertiary: Split into 3 groups, rotate every third day
-                every_third_day = list(self.split(systems_for_priority, 3))
-                systems_to_post = (
-                    every_third_day[daily_sequence % 3] if every_third_day else []
-                )
-            else:
-                systems_to_post = systems_for_priority
-
-            # Log the actual count that will be posted after rotation
-            log(
-                f"Posting {len(systems_to_post)} {priority_string} systems (day {daily_sequence})"
-            )
-
-            # Send header for non-Primary priorities
-            if priority_string != "Primary":
-                await bot.channel.send(f"__**{priority_string} List**__")
-
-            # Write to database (only the systems we're actually posting)
-            await self.repo.write_system_to_post(systems_to_post)
-
-            # Post each system
-            for scout_system in systems_to_post:
-                message = await bot.channel.send(scout_system.system)
-                await message.add_reaction(bot.emoji_bullseye)
-        else:
+        if not systems_for_priority:
             log(f"Empty {priority_string} List")
             return None
 
