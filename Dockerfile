@@ -3,7 +3,6 @@
 # without needing the .git directory to be present in the image.
 ARG VERSION=0.0.0+unknown
 FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
-ARG VERSION
 
 # Install system dependencies: sqlite3 for DB ops, p7zip for extracting system CSVs
 RUN apt-get update \
