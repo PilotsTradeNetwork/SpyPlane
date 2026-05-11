@@ -1,4 +1,8 @@
 # Changelog
+
+# 2.0.0
+- Full rework, remove EBGS/Sheets, rely on EDDN for scouting
+
 ## 0.0.6
 - Make sheet sync response ephemeral
 
