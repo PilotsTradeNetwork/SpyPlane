@@ -1,24 +1,136 @@
 [project]
-name = "spyplane"
-version = "0.1.0"
+name = "ptn-spyplane"
 description = "PTN Spy Plane"
 authors = [
-    { name = "PTN Devs" },
+    { name = "zaszrespawned" },
+    { name = "IndorilReborn" },
 ]
 dependencies = [
     "python-dotenv~=1.2",
-    "discord-py~=2.6",
-    "aiosqlite~=0.21",
-    "gspread~=5.12",
+    "discord-py~=2.7",
+    "aiosqlite~=0.22",
     "aiocron~=2.0",
-    "jq~=1.10",
-    "pytz>=2026.0",
-    "aiohttp~=3.12",
+    "pytz~=2026.2",
+    "aiohttp~=3.13",
     "discord-ext-prometheus~=0.2",
     "httpx~=0.28",
+    "pyzmq~=27.0",
+    "simplejson~=4.1",
 ]
-requires-python = ">=3.10"
+
+requires-python = ">=3.13"
+dynamic = ["version"]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.1.0",
+]
 
 [project.scripts]
-spy = "spyplane.main:run"
+spy = "ptn.spyplane.spy_plane:run"
+lint = "ptn.spyplane.ruff_commands:lint"
+format = "ptn.spyplane.ruff_commands:format_code"
+lint-fix = "ptn.spyplane.ruff_commands:lint_fix"
+tests = "ptn.spyplane.ruff_commands:run_tests"
 
+[tool.uv]
+package = true
+
+[build-system]
+requires = ["setuptools>=61.2", "wheel", "setuptools_scm[toml]>=6"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+fallback_version = "0.0.0+unknown"
+
+[tool.setuptools.packages.find]
+include = ["ptn*"]
+
+[tool.ruff]
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".darcs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+line-length = 120
+
+# Assume Python 3.10+
+target-version = "py310"
+
+[tool.ruff.lint]
+# Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
+# Unlike Flake8, Ruff doesn't combine the checks from a single rule into a single
+# violation. Instead, each check is treated as a separate violation.
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "PL",  # pylint-convention
+    "I",   # isort
+    "N",   # pep8-naming
+    "RUF", # ruff (54 errors)
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "A",   # flake8-builtins
+    "UP",  # pyupgrade
+    "S",   # flake8-bandit
+    "EXE", # flake8-executable
+    "FA",  # flake8-annotation
+    "ICN", # flake8-import-conventions
+    "LOG", # flake8-logging
+    "PIE", # flake8-pie
+    "RSE", # flake8-raise
+    "SIM", # flake8-simplify
+    "TC",  # flake8-type-checking
+    "PERF", # perflint
+    "FURB", # refurb
+    "RET", # flake8-return
+    "ARG", # flake8-arguments
+    "FIX", # flake8-fixme
+    "DTZ", # flake8-datetimez
+    "PTH", # flake8-use-pathlib
+    # "BLE",  # flake8-blind-except
+    # "FBT",  # flake8-boolean-trap
+    # "C90", # mccabe complexity
+]
+ignore = [
+    "E501",  # line too long, handled by ruff format
+    "PLR",   # pylint-refactor
+]
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"

@@ -1,13 +1,15 @@
 import datetime
+from typing import TYPE_CHECKING
 from unittest import IsolatedAsyncioTestCase
 
-from spyplane.database.config_repository import ConfigRepository
-from spyplane.models.config import Config
-from spyplane.spy_plane import bot
+from ptn.spyplane.database.config_repository import ConfigRepository
+from ptn.spyplane.spy_plane import bot
+
+if TYPE_CHECKING:
+    from ptn.spyplane.models.config import Config
 
 
 class ConfigRepositoryTests(IsolatedAsyncioTestCase):
-
     async def asyncSetUp(self) -> None:
         await bot.dbinit()
         self.subject = ConfigRepository()
@@ -18,12 +20,12 @@ class ConfigRepositoryTests(IsolatedAsyncioTestCase):
     async def test_record_scout(self):
         await self.subject.update_config("interval_hours", "6")
         c: Config = await self.subject.get_config("interval_hours")
-        await self.assertConfig(c)
+        await self.assert_config(c)
         await self.subject.update_config("interval_hours", "4")
         c: Config = await self.subject.get_config("interval_hours")
-        await self.assertConfig(c, "4")
+        await self.assert_config(c, "4")
 
-    async def assertConfig(self, c, expected="6"):
+    async def assert_config(self, c, expected="6"):
         self.assertEqual("interval_hours", c.name)
         self.assertEqual(expected, c.value)
         self.assertEqual(datetime.datetime.now(datetime.timezone.utc).date(), c.timestamp.date())
