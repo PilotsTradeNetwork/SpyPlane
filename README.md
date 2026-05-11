@@ -15,50 +15,57 @@ Scouting bot
 
 ## Local devbox setup
 
-### Option 1: Modern uv approach (recommended)
 1. Install [uv using instructions here](https://github.com/astral-sh/uv#installation)
-2. Install dependencies: `uv sync`
-3. Copy `.env.sample` to `.env` and update the values for TEST and PROD
-4. **Create the database**: `./db/recreate.sh`
-5. **Seed with test data**: `cd db/data && uv run python seed_database.py`
-6. Startup the bot with `uv run spy` or `uv run python -m ptn.spyplane.spy_plane`
-
-### Option 2: Manual virtual environment
-1. Install [uv using instructions here](https://github.com/astral-sh/uv#installation)
-2. Create a virtual environment: `uv venv`
-3. Activate the virtual environment: `source .venv/bin/activate`
-4. Install dependencies: `uv pip sync requirements.lock`
-5. Copy `.env.sample` to `.env` and update the values for TEST and PROD
-6. **Create the database**: `./db/recreate.sh`
-7. **Seed with test data**: `cd db/data && python seed_database.py`
-8. Startup the bot with `uv run spy` or `uv run python -m ptn.spyplane.spy_plane`
+2. (Optionally) Install Python: `uv python install`
+3. Install dependencies: `uv sync --extra dev`
+4. Install uv tools: `uv tool install prek`
+5. Install the pre-commit hook: `prek install`
+6. Copy `.env.sample` to `.env` and update the values for TEST and PROD
+7. **Create the database**: `bash db/recreate.sh`
+8. **Seed with test data**: `cd db/data && uv run python seed_database.py`
+9. Startup the bot with `uv run spy` or `uv run python -m ptn.spyplane.spy_plane`
 
 ## Running tests
 
-From the repo root
-
-```bash
-uv run tests
-```
-
-This recreates the test DB from schema and then runs the full suite. Equivalent to:
+From the repo root:
 
 ```bash
 bash db/test_recreate.sh
 uv run python -m unittest discover tests -v
 ```
 
+## Pre-commit checks
+
+Run pre-commit hooks on all files with:
+
+```bash
+prek run --all-files
+```
+
+## Docker setup
+
+1. Build the image:
+
+```bash
+docker build --build-arg VERSION=$(uvx --from setuptools-scm python -m setuptools_scm) -t spyplane .
+```
+
+2. Run the container, mounting your workspace directory:
+
+```bash
+docker run --rm --name spyplane -v /spy/workspace:/app/workspace --env-file /spy/env.list spyplane
+```
+
 
 ## Example docker deployment
+
 ```bash
 #!/usr/bin/env bash
 set -eux
 
-docker pull asia.gcr.io/pilotstradenetwork/spyplane:latest
+docker pull $REGISTRY/spyplane:latest
 
-docker stop spyplane_flight || true && docker rm spyplane_flight || true
-
-# If you face permissions during pull in gcloud VM, just run `docker-credential-gcr configure-docker`
+docker stop spyplane || true && docker rm spyplane || true
 
 cat /spy/env.list
 
@@ -67,9 +74,9 @@ docker run \
         -v /spy/workspace:/app/workspace \
         -e DB_RECREATE \
         --env-file /spy/env.list \
-        --name spyplane_flight \
+        --name spyplane \
         --restart unless-stopped \
-        asia.gcr.io/pilotstradenetwork/spyplane:latest
+        $REGISTRY/spyplane:latest
 
 echo 'Spyplane deployment done!'
 ```

@@ -1,6 +1,5 @@
 [project]
 name = "ptn-spyplane"
-version = "2.0.0"
 description = "PTN Spy Plane"
 authors = [
     { name = "zaszrespawned" },
@@ -20,6 +19,7 @@ dependencies = [
 ]
 
 requires-python = ">=3.13"
+dynamic = ["version"]
 
 [project.optional-dependencies]
 dev = [
@@ -37,8 +37,11 @@ tests = "ptn.spyplane.ruff_commands:run_tests"
 package = true
 
 [build-system]
-requires = ["setuptools>=45", "wheel"]
+requires = ["setuptools>=61.2", "wheel", "setuptools_scm[toml]>=6"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+fallback_version = "0.0.0+unknown"
 
 [tool.setuptools.packages.find]
 include = ["ptn*"]
