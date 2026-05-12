@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from urllib.parse import quote
 
 import discord
@@ -164,10 +164,10 @@ async def goal_post(interaction: discord.Interaction):
             except Exception as e:
                 log(f"Error fetching old message {old_message_id}: {e}")
         header, footer_template = await header_footer_repo.get_header_footer()
-        current_timestamp = int(datetime.now(timezone.utc).timestamp())
+        current_timestamp = int(datetime.now(UTC).timestamp())
         footer = footer_template.replace("{}", str(current_timestamp))
         embed_title = header or "🎯 Faction Goals"
-        embed = discord.Embed(title=embed_title, color=discord.Color.blue(), timestamp=datetime.now(timezone.utc))
+        embed = discord.Embed(title=embed_title, color=discord.Color.blue(), timestamp=datetime.now(UTC))
         embed.set_author(
             name="Director Castro",
             icon_url="https://pilotstradenetwork.com/wp-content/uploads/2021/08/PTN_Dark_wText-768x461.png",

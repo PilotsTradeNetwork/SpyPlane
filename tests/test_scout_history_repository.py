@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 from unittest import IsolatedAsyncioTestCase
 
@@ -24,7 +24,7 @@ class ScoutHistoryRepositoryTests(IsolatedAsyncioTestCase):
             ScoutSystem("Volowahku", "1", 3),
             "zaszrespawned",
             354990093980663889,
-            datetime.now(timezone.utc),
+            datetime.now(UTC),
         )
         history: list[ScoutHistory] = await self.subject.get_history(username="zaszrespawned")
         for scout in history:
@@ -33,4 +33,4 @@ class ScoutHistoryRepositoryTests(IsolatedAsyncioTestCase):
         self.assertEqual("Volowahku", history[0].system_name)
         self.assertEqual("zaszrespawned", history[0].username)
         self.assertEqual(354990093980663889, history[0].userid)
-        self.assertEqual(datetime.now(timezone.utc).date(), history[0].timestamp.date())
+        self.assertEqual(datetime.now(UTC).date(), history[0].timestamp.date())

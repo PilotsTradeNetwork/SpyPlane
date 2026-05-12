@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
 
@@ -14,7 +14,7 @@ class TickService:
             raise RuntimeError("Failed to fetch current tick on startup")
 
     def get_current_tick(self) -> datetime:
-        return datetime.fromtimestamp(int(self.current_tick), timezone.utc)
+        return datetime.fromtimestamp(int(self.current_tick), UTC)
 
     async def has_ticked(self) -> bool:
         try:
@@ -40,5 +40,5 @@ class TickService:
             resp.raise_for_status()
             tick_info = resp.json()
         dt = datetime.fromisoformat(tick_info["lastGalaxyTick"].rstrip("Z"))  # python >= 3.11 understands timezone
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
         return int(dt.timestamp())

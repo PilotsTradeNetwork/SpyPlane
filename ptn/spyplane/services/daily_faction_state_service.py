@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import discord
 
@@ -92,7 +92,7 @@ class DailyFactionStateService:
                     if formatted_states:
                         embed.add_field(name=system, value="\n".join(formatted_states), inline=False)
 
-            except Exception as e:  # noqa: PERF203
+            except Exception as e:
                 log_exception(f"Error processing system {system} for daily report", e)
 
         bot = get_bot()
@@ -109,7 +109,7 @@ class DailyFactionStateService:
             url="https://inara.cz/",
             description=description,
             color=discord.Color.brand_red(),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
         embed.set_footer(
             icon_url="https://edassets.org/static/img/companies/GalNet.png",

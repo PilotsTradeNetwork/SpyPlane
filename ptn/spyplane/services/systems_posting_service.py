@@ -24,6 +24,9 @@ class SystemsPostingService:
         await self.repo.purge_posted_systems()
         await self._purge_channel()
 
+        # Record the tick boundary used for scout deduplication
+        await self.config_repo.update_config("last_posted_at", str(int(datetime.now(UTC).timestamp())))
+
         splits = await self.split_systems_by_priority(tracked_systems)
 
         # Log counts before posting
