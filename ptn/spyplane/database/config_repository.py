@@ -1,4 +1,3 @@
-import time
 from datetime import UTC, datetime
 
 from ptn.spyplane.database.base_repository import BaseRepository
@@ -33,5 +32,5 @@ class ConfigRepository(BaseRepository):
 
     async def update_config(self, name: str, value: str):
         await self.begin()
-        await self.db().execute(update_config, (value, time.mktime(datetime.now(UTC).timetuple()), name))
+        await self.db().execute(update_config, (value, datetime.now(UTC).timestamp(), name))
         await self.commit()

@@ -32,7 +32,7 @@ for the space game *Elite Dangerous*. Key responsibilities:
 | Runtime | `discord.py 2.6`, `aiosqlite`, `pyzmq`, `aiohttp` |
 | Test framework | `unittest` (stdlib `IsolatedAsyncioTestCase`) |
 | Linter/formatter | `ruff` (config in `pyproject.toml`) |
-| Database | SQLite, file at `./workspace/spyplane.db` (prod) or `./tests/test_workspace/spyplane.db` (test) |
+| Database | SQLite, file at `./workspace/spyplane.db` (prod) or `./tests/test_workspace/spyplane.db` (test); schema in `db/schema.sql` |
 | Containerisation | Docker via `Dockerfile` + `entrypoint.sh` |
 | CI | GitHub Actions — builds and pushes a Docker image on `v*` tag push (`.github/workflows/build.yml`) |
 | Line length | 120 characters (configured in `pyproject.toml`) |
@@ -164,8 +164,8 @@ bash db/test_recreate.sh          # ensure test DB is up-to-date
 uv run python -m unittest discover tests -v
 ```
 
-- There are **33 tests** across 8 test files.
-- All 33 tests pass when the test DB is present.
+- There are **40 tests** across 8 test files.
+- All 40 tests pass when the test DB is present.
 - Tests that hit the database use `IsolatedAsyncioTestCase` and import `bot`
   from `ptn.spyplane.spy_plane` to open/close the real SQLite connection.
 - `test_post_after_tick_service.py` makes a real HTTP request to
@@ -315,12 +315,13 @@ the git tag at build time. There is **no hardcoded version** in the source.
 | `ptn/spyplane/discord_listener.py` | `on_ready`, `on_message`, `on_raw_reaction_add`, error handler |
 | `ptn/spyplane/eddn_listener.py` | ZMQ background thread, EDDN event processing |
 | `ptn/spyplane/database/base_repository.py` | Base class with `db()`, `begin()`, `commit()`, `rollback()` |
-| `ptn/spyplane/database/systems_repository.py` | `scout_systems` + `scout_systems_posted` table operations |
+| `ptn/spyplane/database/systems_repository.py` | `scout_systems` + `scout_systems_posted` table operations; `get_posted_systems()` returns unscouted rows only; `get_all_posted_systems()` returns all rows with scouted flag |
 | `ptn/spyplane/services/systems_posting_service.py` | Post scouting list to Discord channel |
 | `ptn/spyplane/services/tick_service.py` | Poll tick API, detect new ticks |
 | `ptn/spyplane/services/post_after_tick_service.py` | Schedule system posting after tick |
 | `ptn/spyplane/services/faction_state_service.py` | Extract + persist faction states from EDDN |
+| `ptn/spyplane/services/scouting_progress_service.py` | Periodic + on-demand refresh of tick progress and totals embeds; reads scouted counts directly from `scout_systems_posted.scouted` |
 | `ptn/spyplane/helpers/journal_helper.py` | Filter EDDN events by type + tracked systems |
-| `db/schema.sql` | Authoritative SQLite schema |
+| `db/schema.sql` | Authoritative SQLite schema — `scout_systems_posted` has a `scouted INTEGER NOT NULL DEFAULT 0` column; `mark_scouted` does a soft-delete (`UPDATE … SET scouted=1`) rather than a hard `DELETE` so tick counts remain accurate |
 | `pyproject.toml` | Dependencies, ruff config, `uv` scripts, `setuptools_scm` config |
 | `.pre-commit-config.yaml` | `prek`/`pre-commit` hook config (ruff check + format, file hygiene) |

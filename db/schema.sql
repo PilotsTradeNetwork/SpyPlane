@@ -31,7 +31,8 @@ CREATE TABLE IF NOT EXISTS scout_systems_posted
 (
     "system_name" TEXT PRIMARY KEY,
     "priority"    TEXT NOT NULL,
-    "message_id"  INTEGER
+    "message_id"  INTEGER,
+    "scouted"     INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS faction_states
@@ -86,3 +87,4 @@ INSERT INTO configuration (name, value, timestamp) VALUES ('secondary_limit', '0
 INSERT INTO configuration (name, value, timestamp) VALUES ('tertiary_limit', '0', 1655665882) ON CONFLICT DO NOTHING;
 INSERT INTO configuration (name, value, timestamp) VALUES ('selection_mode', 'oldest_first', 1655665882) ON CONFLICT DO NOTHING;
 INSERT INTO configuration (name, value, timestamp) VALUES ('tracked_changed_at', '0', 1655665882) ON CONFLICT DO NOTHING;
+INSERT INTO configuration (name, value, timestamp) VALUES ('last_posted_at', '0', 1655665882) ON CONFLICT DO NOTHING;
