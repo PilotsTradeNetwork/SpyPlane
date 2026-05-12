@@ -2,7 +2,7 @@ import asyncio
 import csv
 import io
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Literal
 
@@ -12,7 +12,7 @@ from discord.ui import Modal, TextInput
 
 from ptn.spyplane._metadata import __version__
 from ptn.spyplane.bot_registry import get_bot
-from ptn.spyplane.constants import log
+from ptn.spyplane.constants import log, log_exception
 from ptn.spyplane.database.config_repository import ConfigRepository
 from ptn.spyplane.database.scout_history_repository import ScoutHistoryRepository
 from ptn.spyplane.database.systems_repository import SystemsRepository
@@ -20,6 +20,7 @@ from ptn.spyplane.models.scout_system import ScoutSystem
 from ptn.spyplane.services.config_service import ConfigService
 from ptn.spyplane.services.daily_faction_state_service import DailyFactionStateService
 from ptn.spyplane.services.edsm_service import fetch_edsm_systems
+from ptn.spyplane.services.scouting_progress_service import get_scouting_progress_service
 from ptn.spyplane.services.systems_posting_service import SystemsPostingService
 
 # -------------
@@ -78,6 +79,30 @@ async def faction_daily_report(interaction: Interaction):
     await interaction.followup.send("✅ Daily faction state report posted", ephemeral=True)
 
 
+@faction.command(name="refresh_progress")
+async def faction_refresh_progress(interaction: Interaction):
+    """Force-refresh the scouting progress embed, starting the progress service if it was stopped"""
+    await interaction.response.defer(ephemeral=True)
+    log(f"User {interaction.user.name} is force-refreshing the scouting progress embed.")
+    service = get_scouting_progress_service()
+    restarted = False
+    if not service.update_progress_embeds.is_running():
+        service.start()
+        restarted = True
+        log("[ScoutingProgressService] Service was stopped - restarted by refresh_progress command.")
+    try:
+        await service._refresh_scout_embed()
+        await service._refresh_report_embed()
+    except Exception as e:
+        log_exception("faction_refresh_progress", e)
+        await interaction.followup.send(
+            "❌ An error occurred while refreshing the scouting progress embed.", ephemeral=True
+        )
+        return
+    notice = "\n⚠️ The progress service was not running and has been restarted." if restarted else ""
+    await interaction.followup.send(f"✅ Scouting progress embed refreshed.{notice}", ephemeral=True)
+
+
 @faction.command(name="launch")
 async def faction_launch(interaction: Interaction):
     """Begin HUMINT and Infiltration operations: Posts the systems to scout in pre-assigned dead drops"""
@@ -100,13 +125,13 @@ async def faction_list(interaction: Interaction):
     writer = csv.writer(output)
     writer.writerow(["System Name", "Priority", "Added By", "Added At"])
     for system in tracked_systems:
-        added_date = datetime.fromtimestamp(system.added_at, timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        added_date = datetime.fromtimestamp(system.added_at, UTC).strftime("%Y-%m-%d %H:%M:%S")
         writer.writerow([system.system, system.priority, system.added_by, added_date])
     csv_content = output.getvalue()
     csv_file = io.BytesIO(csv_content.encode("utf-8"))
     discord_file = discord.File(
         csv_file,
-        filename=f"tracked_systems_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.csv",
+        filename=f"tracked_systems_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.csv",
     )
     embed = discord.Embed(
         title="📋 Tracked Systems Export",
@@ -128,7 +153,7 @@ async def faction_operations_report(interaction: Interaction):
     """Top Secret: Classified agent activity report. Faction Command Eyes-Only."""
     await interaction.response.defer()
     try:
-        three_months_ago = datetime.now(timezone.utc) - timedelta(days=90)
+        three_months_ago = datetime.now(UTC) - timedelta(days=90)
         repo = ScoutHistoryRepository()
         scout_history = await repo.get_history()
         recent_scouts = [scout for scout in scout_history if scout.timestamp >= three_months_ago]
