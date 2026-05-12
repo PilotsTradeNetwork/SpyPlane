@@ -1,4 +1,6 @@
 # Changelog
+## 2.0.1
+- Simplify goals flow, improve adding goals UX 
 
 # 2.0.0
 - Full rework, remove EBGS/Sheets, rely on EDDN for scouting
