@@ -70,8 +70,7 @@ SpyPlane/
 ├── workspace/               # Runtime directory — gitignored DB, CSV files
 ├── pyproject.toml           # Project metadata, dependencies, ruff config, scripts
 ├── uv.lock                  # Locked dependencies (commit changes to this)
-├── requirements.lock        # pip-compatible lock used by Docker image
-├── Dockerfile               # Docker build (python:3.10-slim-bookworm base)
+├── Dockerfile               # Docker build (python:3.13-slim-bookworm base)
 ├── entrypoint.sh            # Docker CMD — optionally recreates DB then runs bot
 └── localrun.sh              # Docker convenience script for local runs
 ```
