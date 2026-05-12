@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest import IsolatedAsyncioTestCase
 
 from ptn.spyplane.services.post_after_tick_service import PostAfterTickService
@@ -17,4 +17,4 @@ class PostAfterTickServiceTests(IsolatedAsyncioTestCase):
         print(self.subject.tick_service.get_current_tick())
         self.assertFalse(tick_check)
         self.assertEqual(10, len(str(self.subject.tick_service.current_tick)))
-        self.assertTrue(self.subject.tick_service.get_current_tick() <= datetime.now(timezone.utc))
+        self.assertTrue(self.subject.tick_service.get_current_tick() <= datetime.now(UTC))

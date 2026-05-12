@@ -1,5 +1,5 @@
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from ptn.spyplane.constants import log
 from ptn.spyplane.database.base_repository import BaseRepository
@@ -142,7 +142,7 @@ class FactionGoalsRepository(BaseRepository):
 
     async def set_message_id(self, message_id: int | None) -> None:
         value = str(message_id) if message_id else ""
-        timestamp = int(time.mktime(datetime.now(timezone.utc).timetuple()))
+        timestamp = int(time.mktime(datetime.now(UTC).timetuple()))
 
         # Check if config exists, then update or insert
         check_config = """

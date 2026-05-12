@@ -57,10 +57,15 @@ class ScoutingProgressService:
 
         scouted_counts = await self._count_scouted_since(cutoff)
 
-        posted_totals: dict[str, int] = dict.fromkeys(_PRIORITIES, 0)
+        remaining_counts: dict[str, int] = dict.fromkeys(_PRIORITIES, 0)
         for s in posted_systems:
-            if s.priority in posted_totals:
-                posted_totals[s.priority] += 1
+            if s.priority in remaining_counts:
+                remaining_counts[s.priority] += 1
+
+        # Total = still-posted (remaining) + already scouted this tick
+        posted_totals: dict[str, int] = {
+            priority: remaining_counts[priority] + scouted_counts.get(priority, 0) for priority in _PRIORITIES
+        }
 
         embed = self._build_tick_embed(scouted_counts, posted_totals)
         self._scout_embed_message = await self._post_or_edit(
