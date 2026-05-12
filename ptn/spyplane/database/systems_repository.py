@@ -27,8 +27,8 @@ from systems
 where name = ?
 """
 
-remove_scouted_system = """
-delete from scout_systems_posted where system_name=?
+mark_scouted_system = """
+update scout_systems_posted set scouted=1 where system_name=?
 """
 
 purge_scout = """
@@ -41,6 +41,13 @@ delete from scout_systems_posted
 
 get_post_systems = """
 select ssp.system_name, ssp.priority, ss.added_by, ss.added_at
+from scout_systems_posted ssp
+join scout_systems ss on ssp.system_name = ss.system_name
+where ssp.scouted = 0
+"""
+
+get_all_posted_systems = """
+select ssp.system_name, ssp.priority, ss.added_by, ss.added_at, ssp.scouted
 from scout_systems_posted ssp
 join scout_systems ss on ssp.system_name = ss.system_name
 """
@@ -62,7 +69,14 @@ class SystemsRepository(BaseRepository):
             return row and row[0] and row[0] == system
 
     async def get_posted_systems(self) -> list[ScoutSystem]:
+        """Return only unscouted posted systems (remaining this tick)."""
         return await self.get_systems(get_post_systems)
+
+    async def get_all_posted_systems(self) -> list[tuple[ScoutSystem, bool]]:
+        """Return all posted systems for this tick with their scouted flag."""
+        async with self.db().execute(get_all_posted_systems) as cur:
+            rows = await cur.fetchall()
+        return [(ScoutSystem(row[0], row[1], row[2], row[3]), bool(row[4])) for row in rows]
 
     async def get_message_id(self, system_name: str) -> int | None:
         """Get message_id for a system from scout_systems_posted table"""
@@ -85,17 +99,19 @@ class SystemsRepository(BaseRepository):
         await self.db().execute(purge_posted)
         await self.commit()
 
-    async def remove_scouted(self, system_name) -> None:
-        await self.db().execute(remove_scouted_system, [system_name])
-        log(f"Removed scout: {system_name}")
+    async def mark_scouted(self, system_name) -> None:
+        await self.db().execute(mark_scouted_system, [system_name])
+        log(f"Marked scouted: {system_name}")
 
     async def get_systems(self, query) -> list[ScoutSystem]:
         async with self.db().execute(query) as cur:
             rows = await cur.fetchall()
-        # Handle different query result formats
-        if len(rows) > 0 and len(rows[0]) == 4:  # scout_systems table (system_name, priority, added_by, added_at)
+        if not rows:
+            return []
+        col_count = len(rows[0])
+        if col_count >= 4:  # system_name, priority, added_by, added_at (+ optional scouted)
             return [ScoutSystem(row[0], row[1], row[2], row[3]) for row in rows]
-        if len(rows) > 0 and len(rows[0]) == 2:  # scout_systems_posted table (system_name, priority)
+        if col_count == 2:  # legacy: system_name, priority only
             return [ScoutSystem(row[0], row[1], "posted", 0) for row in rows]
         return []
 

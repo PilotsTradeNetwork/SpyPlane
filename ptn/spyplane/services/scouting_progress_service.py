@@ -47,25 +47,15 @@ class ScoutingProgressService:
             log("[ScoutingProgressService] bot.channel is None, skipping scout embed")
             return
 
-        # Determine the cutoff timestamp: earliest added_at among posted systems
-        posted_systems = await self.repo.get_posted_systems()
-        if not posted_systems:
-            cutoff = 0
-        else:
-            non_zero = [s.added_at for s in posted_systems if s.added_at != 0]
-            cutoff = min(non_zero) if non_zero else 0
+        all_posted = await self.repo.get_all_posted_systems()
 
-        scouted_counts = await self._count_scouted_since(cutoff)
-
-        remaining_counts: dict[str, int] = dict.fromkeys(_PRIORITIES, 0)
-        for s in posted_systems:
-            if s.priority in remaining_counts:
-                remaining_counts[s.priority] += 1
-
-        # Total = still-posted (remaining) + already scouted this tick
-        posted_totals: dict[str, int] = {
-            priority: remaining_counts[priority] + scouted_counts.get(priority, 0) for priority in _PRIORITIES
-        }
+        scouted_counts: dict[str, int] = dict.fromkeys(_PRIORITIES, 0)
+        posted_totals: dict[str, int] = dict.fromkeys(_PRIORITIES, 0)
+        for system, scouted in all_posted:
+            if system.priority in posted_totals:
+                posted_totals[system.priority] += 1
+            if scouted and system.priority in scouted_counts:
+                scouted_counts[system.priority] += 1
 
         embed = self._build_tick_embed(scouted_counts, posted_totals)
         self._scout_embed_message = await self._post_or_edit(
