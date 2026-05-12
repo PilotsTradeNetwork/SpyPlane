@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from urllib.parse import quote
 
 import discord
+import discord.ui as ui
 from discord import Interaction, TextStyle, app_commands
 from discord.ui import Modal, Select, TextInput, View
 
@@ -185,26 +186,27 @@ async def goal_post(interaction: discord.Interaction):
             if system not in seen_systems:
                 systems_ordered.append(system)
                 seen_systems.add(system)
+        description_parts = []
         for system_number, system in enumerate(systems_ordered, start=1):
             system_goals = systems_dict[system]
             system_url = f"https://inara.cz/elite/starsystem/?search={quote(system)}"
-            field_value_parts = []
+            description_parts.append(f"## {system_number}. {system}")
             if len(system_goals) > 1:
                 for idx, g in enumerate(system_goals):
                     _index, _, faction_one, faction_other, goalkind, additional_note = g
                     rendered_template = render_goal_template(goalkind, faction_one, faction_other)
-                    suffix = chr(ord("a") + idx)
-                    field_value_parts.append(f"{suffix}. {rendered_template}")
+                    description_parts.append(f"{idx + 1}. {rendered_template}")
                     if additional_note:
-                        field_value_parts.append(f"    {additional_note}")
+                        description_parts.append(f"    {additional_note}")
             else:
                 _index, _, faction_one, faction_other, goalkind, additional_note = system_goals[0]
                 rendered_template = render_goal_template(goalkind, faction_one, faction_other)
-                field_value_parts.append(rendered_template)
+                description_parts.append(rendered_template)
                 if additional_note:
-                    field_value_parts.append(f"    {additional_note}")
-            field_value_parts.append(system_url)
-            embed.add_field(name=f"{system_number}. {system}", value="\n".join(field_value_parts), inline=False)
+                    description_parts.append(f"    {additional_note}")
+            description_parts.append(system_url)
+            description_parts.append("-" * 40)
+        embed.description = "\n".join(description_parts)
         if footer:
             embed.add_field(name="\u200b", value=footer, inline=False)
         embed.set_footer(
@@ -272,8 +274,11 @@ bot.tree.add_command(goal)
 def render_goal_template(goalkind: str, faction_one: str, faction_other: str) -> str:
     if goalkind == "Custom":
         return faction_one
+    if goalkind == "RaiseInf":
+        if faction_other:
+            return f"Raise INF for __{faction_one}__ to spark the conflict with __{faction_other}__ <:Courier:{EMOJI_COURIER}>"
+        return f"Raise INF for __{faction_one}__. <:Courier:{EMOJI_COURIER}>"
     templates = {
-        "RaiseInf": f"Raise INF for __{faction_one}__ to spark the conflict with __{faction_other}__ <:Courier:{EMOJI_COURIER}>",
         "WinElection": f"Win the Election for __{faction_one}__.  <:partnership:{EMOJI_PARTNERSHIP}>",
         "WinWar": f"Win the War for __{faction_one}__. <:Assassin:{EMOJI_ASSASSIN}>",
         "WinCivilWar": f"Win the Civil war for __{faction_one}__. <:Assassin:{EMOJI_ASSASSIN}>",
@@ -286,13 +291,23 @@ def render_goal_template(goalkind: str, faction_one: str, faction_other: str) ->
 # -----
 
 GOAL_KIND_OPTIONS = [
-    discord.SelectOption(label="Raise Influence", value="RaiseInf", description="Raise INF to spark conflict"),
-    discord.SelectOption(label="Win Election", value="WinElection", description="Win the Election"),
-    discord.SelectOption(label="Win War", value="WinWar", description="Win the War"),
-    discord.SelectOption(label="Win Civil War", value="WinCivilWar", description="Win the Civil War"),
+    discord.SelectOption(label="Raise INF", value="RaiseInf", description="Raise INF to spark conflict"),
+    discord.SelectOption(label="Win Conflict", value="WinConflict", description="Win Election, War, or Civil War"),
     discord.SelectOption(label="Custom", value="Custom", description="Custom multiline text goal"),
 ]
-_GOALKIND_LABELS = {opt.value: opt.label for opt in GOAL_KIND_OPTIONS}
+_CONFLICT_KIND_OPTIONS = [
+    discord.SelectOption(label="Win Election", value="WinElection"),
+    discord.SelectOption(label="Win War", value="WinWar"),
+    discord.SelectOption(label="Win Civil War", value="WinCivilWar"),
+]
+_CONFLICT_KINDS = {"WinElection", "WinWar", "WinCivilWar"}
+_GOALKIND_LABELS = {
+    "RaiseInf": "Raise INF",
+    "WinElection": "Win Election",
+    "WinWar": "Win War",
+    "WinCivilWar": "Win Civil War",
+    "Custom": "Custom",
+}
 
 
 class GoalKindSelectView(View):
@@ -310,7 +325,12 @@ class GoalKindSelectView(View):
 
     async def select_goalkind(self, interaction: Interaction):
         goalkind = self.select.values[0]
-        modal = AddCustomGoalModal() if goalkind == "Custom" else AddGoalModal(goalkind=goalkind)
+        if goalkind == "Custom":
+            modal = AddCustomGoalModal()
+        elif goalkind == "WinConflict":
+            modal = AddWinConflictGoalModal()
+        else:
+            modal = AddGoalModal(goalkind=goalkind)
         await interaction.response.send_modal(modal)
 
 
@@ -330,7 +350,12 @@ class EditGoalKindSelectView(View):
 
     async def select_goalkind(self, interaction: Interaction):
         new_goalkind = self.select.values[0]
-        modal = EditCustomGoalModal(self.goal) if new_goalkind == "Custom" else EditGoalModal(self.goal, new_goalkind)
+        if new_goalkind == "Custom":
+            modal = EditCustomGoalModal(self.goal)
+        elif new_goalkind == "WinConflict":
+            modal = EditWinConflictGoalModal(self.goal)
+        else:
+            modal = EditGoalModal(self.goal, new_goalkind)
         await interaction.response.send_modal(modal)
 
 
@@ -377,7 +402,7 @@ class AddGoalModal(BaseGoalModal):
 
     faction_one_input = TextInput(label="Faction One", placeholder="First faction name", required=True, max_length=100)
     faction_other_input = TextInput(
-        label="Faction Other", placeholder="Other faction name (required for RaiseInf)", required=False, max_length=100
+        label="Faction Other", placeholder="Other faction name (optional for RaiseInf)", required=False, max_length=100
     )
     additional_note_input = TextInput(
         label="Additional Note",
@@ -406,11 +431,7 @@ class AddGoalModal(BaseGoalModal):
                     f"❌ Invalid goal kind. Must be one of: {', '.join(valid_goalkinds)}", ephemeral=True
                 )
                 return
-            if self.goalkind == "RaiseInf" and not faction_other:
-                await interaction.response.send_message(
-                    "❌ Faction Other is required for RaiseInf goal kind.", ephemeral=True
-                )
-                return
+            # faction_other is optional for RaiseInf
             await repo.add_goal(index, system, faction_one, faction_other or "", self.goalkind, additional_note)
             response_text = (
                 f"✅ Added faction goal:\n**Goal Kind:** {self.goalkind}\n**Index:** {index}\n"
@@ -418,6 +439,55 @@ class AddGoalModal(BaseGoalModal):
             )
             if faction_other:
                 response_text += f"\n**Faction Other:** {faction_other}"
+            if additional_note:
+                response_text += f"\n**Additional Note:** {additional_note}"
+            await interaction.response.send_message(response_text, ephemeral=True)
+        except Exception as e:
+            log(f"Error adding faction goal: {e}")
+            await interaction.response.send_message(f"❌ Error adding faction goal: {e!s}", ephemeral=True)
+
+
+class AddWinConflictGoalModal(BaseGoalModal):
+    def __init__(self):
+        super().__init__(title="Add Win Conflict Goal")
+
+    conflict_type = ui.Label(
+        text="Conflict Type",
+        component=ui.Select(
+            options=[
+                discord.SelectOption(label="Win Election", value="WinElection"),
+                discord.SelectOption(label="Win War", value="WinWar"),
+                discord.SelectOption(label="Win Civil War", value="WinCivilWar"),
+            ]
+        ),
+    )
+    faction_one_input = TextInput(label="Faction", placeholder="Faction name", required=True, max_length=100)
+    additional_note_input = TextInput(
+        label="Additional Note",
+        placeholder="Optional additional note for this goal",
+        style=TextStyle.long,
+        required=False,
+        max_length=500,
+    )
+
+    async def on_submit(self, interaction: Interaction):
+        repo = FactionGoalsRepository()
+        try:
+            result = await self.validate_common_fields(interaction)
+            if result is None:
+                return
+            index, system = result
+            goalkind = self.conflict_type.component.values[0]
+            faction_one = self.faction_one_input.value.strip() if self.faction_one_input.value else None
+            additional_note = self.additional_note_input.value.strip() if self.additional_note_input.value else None
+            if not faction_one:
+                await interaction.response.send_message("❌ Faction is required.", ephemeral=True)
+                return
+            await repo.add_goal(index, system, faction_one, "", goalkind, additional_note)
+            response_text = (
+                f"✅ Added faction goal:\n**Goal Kind:** {goalkind}\n**Index:** {index}\n"
+                f"**System:** {system}\n**Faction:** {faction_one}"
+            )
             if additional_note:
                 response_text += f"\n**Additional Note:** {additional_note}"
             await interaction.response.send_message(response_text, ephemeral=True)
@@ -536,11 +606,7 @@ class EditGoalModal(Modal):
                 return
             faction_other = self.faction_other_input.value.strip() if self.faction_other_input.value else None
             additional_note = self.additional_note_input.value.strip() if self.additional_note_input.value else None
-            if self.new_goalkind == "RaiseInf" and not faction_other:
-                await interaction.response.send_message(
-                    "❌ Faction Other is required for RaiseInf goal kind.", ephemeral=True
-                )
-                return
+            # faction_other is optional for RaiseInf
             if new_index != self.original_index:
                 await repo.remove_goal(self.original_index)
                 await repo.add_goal(
@@ -561,6 +627,99 @@ class EditGoalModal(Modal):
             )
             if faction_other:
                 response_text += f"\n**Faction Other:** {faction_other}"
+            if additional_note:
+                response_text += f"\n**Additional Note:** {additional_note}"
+            await interaction.response.send_message(response_text, ephemeral=True)
+        except Exception as e:
+            log(f"Error updating faction goal: {e}")
+            await interaction.response.send_message(f"❌ Error updating faction goal: {e!s}", ephemeral=True)
+
+
+class EditWinConflictGoalModal(Modal):
+    def __init__(self, goal: tuple):
+        super().__init__(title="Edit Win Conflict Goal")
+        index, system, faction_one, _faction_other, current_goalkind, additional_note = goal
+        self.original_index = index
+        default_kind = current_goalkind if current_goalkind in _CONFLICT_KINDS else "WinElection"
+        options = [
+            discord.SelectOption(label=opt.label, value=opt.value, default=(opt.value == default_kind))
+            for opt in _CONFLICT_KIND_OPTIONS
+        ]
+        self.index_input = TextInput(
+            label="Index",
+            placeholder="Priority index (integer) for this goal",
+            default=str(index),
+            required=True,
+            max_length=10,
+        )
+        self.system_input = TextInput(
+            label="System", placeholder="System name for this goal", default=system, required=True, max_length=100
+        )
+        self.conflict_type = ui.Label(text="Conflict Type", component=ui.Select(options=options))
+        self.faction_one_input = TextInput(
+            label="Faction", placeholder="Faction name", default=faction_one, required=True, max_length=100
+        )
+        self.additional_note_input = TextInput(
+            label="Additional Note",
+            placeholder="Optional additional note for this goal",
+            default=additional_note or "",
+            style=TextStyle.long,
+            required=False,
+            max_length=500,
+        )
+        self.add_item(self.conflict_type)
+        self.add_item(self.index_input)
+        self.add_item(self.system_input)
+        self.add_item(self.faction_one_input)
+        self.add_item(self.additional_note_input)
+
+    async def on_submit(self, interaction: Interaction):
+        repo = FactionGoalsRepository()
+        try:
+            new_goalkind = self.conflict_type.component.values[0]
+            index_str = self.index_input.value.strip() if self.index_input.value else None
+            if not index_str:
+                await interaction.response.send_message("❌ Index is required.", ephemeral=True)
+                return
+            try:
+                new_index = int(index_str)
+            except ValueError:
+                await interaction.response.send_message("❌ Index must be a valid integer.", ephemeral=True)
+                return
+            if new_index != self.original_index:
+                existing = await repo.get_goal_by_index(new_index)
+                if existing:
+                    await interaction.response.send_message(
+                        f"❌ A goal with index {new_index} already exists. "
+                        "Use a different index or remove the existing one first.",
+                        ephemeral=True,
+                    )
+                    return
+            system = self.system_input.value.strip() if self.system_input.value else None
+            if not system:
+                await interaction.response.send_message("❌ System is required.", ephemeral=True)
+                return
+            faction_one = self.faction_one_input.value.strip() if self.faction_one_input.value else None
+            if not faction_one:
+                await interaction.response.send_message("❌ Faction is required.", ephemeral=True)
+                return
+            additional_note = self.additional_note_input.value.strip() if self.additional_note_input.value else None
+            if new_index != self.original_index:
+                await repo.remove_goal(self.original_index)
+                await repo.add_goal(new_index, system, faction_one, "", new_goalkind, additional_note)
+            else:
+                updated = await repo.update_goal(
+                    self.original_index, system, faction_one, "", new_goalkind, additional_note
+                )
+                if not updated:
+                    await interaction.response.send_message(
+                        f"❌ No goal found with index {self.original_index} to update.", ephemeral=True
+                    )
+                    return
+            response_text = (
+                f"✅ Updated faction goal:\n**Goal Kind:** {new_goalkind}\n**Index:** {new_index}\n"
+                f"**System:** {system}\n**Faction:** {faction_one}"
+            )
             if additional_note:
                 response_text += f"\n**Additional Note:** {additional_note}"
             await interaction.response.send_message(response_text, ephemeral=True)
