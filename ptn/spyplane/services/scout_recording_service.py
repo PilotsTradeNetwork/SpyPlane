@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from ptn.spyplane.bot_registry import get_bot
 from ptn.spyplane.constants import log
@@ -18,7 +18,7 @@ class ScoutRecordingService:
             system = await self.systems_repo.get_system(content)
             async with bot.lock:
                 await self.systems_repo.begin()
-                ts = datetime.now(timezone.utc)
+                ts = datetime.now(UTC)
                 await self.history_repo.record_scout(system, username, userid, ts)
                 await self.systems_repo.remove_scouted(system.system)
                 await self.systems_repo.commit()

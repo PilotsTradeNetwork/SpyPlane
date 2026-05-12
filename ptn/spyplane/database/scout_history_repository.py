@@ -1,5 +1,5 @@
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from ptn.spyplane.constants import log
 from ptn.spyplane.database.base_repository import BaseRepository
@@ -26,7 +26,7 @@ select distinct system_name from scout_history where timestamp >= ?
 class ScoutHistoryRepository(BaseRepository):
     async def record_scout(self, system: ScoutSystem, username, userid, ts=None):
         if ts is None:
-            ts = datetime.now(timezone.utc)
+            ts = datetime.now(UTC)
         await self.db().execute(
             insert_scout_history,
             (system.system, username, userid, time.mktime(ts.timetuple())),
@@ -52,7 +52,7 @@ class ScoutHistoryRepository(BaseRepository):
             params.append(userid)
         async with self.db().execute(query, parameters=params) as cur:
             rows = await cur.fetchall()
-            return [ScoutHistory(r[0], r[1], r[2], r[3], datetime.fromtimestamp(r[4], timezone.utc)) for r in rows]
+            return [ScoutHistory(r[0], r[1], r[2], r[3], datetime.fromtimestamp(r[4], UTC)) for r in rows]
 
     async def get_systems_scouted_since(self, cutoff: float) -> set[str]:
         """Return the set of system names that have a scout record at or after cutoff (UTC timestamp)."""

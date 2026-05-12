@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from ptn.spyplane.constants import log
 from ptn.spyplane.database.base_repository import BaseRepository
@@ -147,7 +147,7 @@ class SystemsRepository(BaseRepository):
     async def add_system(self, system_name: str, priority: str, added_by: str) -> bool:
         """Add a system to track. Returns True if added, False if already exists."""
         try:
-            added_at = int(datetime.now(timezone.utc).timestamp())
+            added_at = int(datetime.now(UTC).timestamp())
             await self.db().execute(
                 insert_scout_system,
                 [system_name, priority, added_by, added_at],

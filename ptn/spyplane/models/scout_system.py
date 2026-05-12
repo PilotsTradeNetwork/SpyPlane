@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 @dataclass
@@ -13,4 +13,4 @@ class ScoutSystem:
 
     def __post_init__(self):
         if self.added_at == 0:
-            self.added_at = int(datetime.now(timezone.utc).timestamp())
+            self.added_at = int(datetime.now(UTC).timestamp())
