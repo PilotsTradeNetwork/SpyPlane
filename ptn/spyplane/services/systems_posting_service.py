@@ -1,3 +1,4 @@
+import asyncio
 from datetime import UTC, datetime, timedelta
 
 import discord.message
@@ -7,7 +8,11 @@ from ptn.spyplane.constants import FACTION_SCOUT_ROLE_ID, log
 from ptn.spyplane.database.config_repository import ConfigRepository
 from ptn.spyplane.database.scout_history_repository import ScoutHistoryRepository
 from ptn.spyplane.database.systems_repository import SystemsRepository
+from ptn.spyplane.helpers.route_solver import solve_path
 from ptn.spyplane.models.scout_system import ScoutSystem
+from ptn.spyplane.services.edsm_service import fetch_edsm_systems
+
+PRIORITIES = ("Primary", "Secondary", "Tertiary")
 
 
 class SystemsPostingService:
@@ -28,20 +33,21 @@ class SystemsPostingService:
         await self.config_repo.update_config("last_posted_at", str(int(datetime.now(UTC).timestamp())))
 
         splits = await self.split_systems_by_priority(tracked_systems)
+        distances = await self.order_by_route(splits)
 
         # Log counts before posting
         log(
             f"Posting systems - Primary: {len(splits['Primary'])}, Secondary: {len(splits['Secondary'])}, Tertiary: {len(splits['Tertiary'])}"
         )
 
-        first_message = await self.post_list(splits, "Primary")
-        await self.post_list(splits, "Secondary")
-        await self.post_list(splits, "Tertiary")
+        first_message = await self.post_list(splits, "Primary", distances.get("Primary"))
+        await self.post_list(splits, "Secondary", distances.get("Secondary"))
+        await self.post_list(splits, "Tertiary", distances.get("Tertiary"))
 
         if len(tracked_systems):
             await bot.channel.send(f"<@&{FACTION_SCOUT_ROLE_ID}> List Updated\nLink to top: {first_message.jump_url}")
 
-    async def post_list(self, splits, priority_string):
+    async def post_list(self, splits, priority_string, distance: float | None = None):
         bot = get_bot()
         systems_for_priority = splits[priority_string]
 
@@ -52,9 +58,10 @@ class SystemsPostingService:
         first_message = None
         log(f"Posting {len(systems_for_priority)} {priority_string} systems")
 
-        # Send header for non-Primary priorities
-        if priority_string != "Primary":
-            await bot.channel.send(f"__**{priority_string} List**__")
+        header = f"__**{priority_string} List**__"
+        if distance is not None:
+            header += f" ({distance:.1f} LYs)"
+        await bot.channel.send(header)
 
         # Post each system and collect message IDs
         message_ids = {}
@@ -69,6 +76,33 @@ class SystemsPostingService:
         await self.repo.write_system_to_post(systems_for_priority, message_ids)
 
         return first_message
+
+    @staticmethod
+    async def order_by_route(splits: dict[str, list[ScoutSystem]]) -> dict[str, float]:
+        """
+        Reorder each priority list in place along the shortest one-way route (EDSM coords).
+        Systems without coords keep their order and go last. Returns route length per priority;
+        priorities with fewer than 2 routable systems are omitted. On failure, remaining lists stay unsorted.
+        """
+        distances: dict[str, float] = {}
+        names = [s.system for p in PRIORITIES for s in splits.get(p, [])]
+        if not names:
+            return distances
+        try:
+            edsm = await fetch_edsm_systems(names)
+            for priority in PRIORITIES:
+                bucket = splits.get(priority, [])
+                coords = {s.system: c for s in bucket if (e := edsm.get(s.system)) and (c := e.coords)}
+                routable = [s for s in bucket if s.system in coords]
+                if len(routable) < 2:
+                    continue
+                # CPU-bound, keep it off the event loop
+                path, length = await asyncio.to_thread(solve_path, [coords[s.system] for s in routable])
+                splits[priority] = [routable[i] for i in path] + [s for s in bucket if s.system not in coords]
+                distances[priority] = length
+        except Exception as e:
+            log(f"[ERROR] route ordering failed, posting unsorted: {e}")
+        return distances
 
     async def _purge_channel(self):
         bot = get_bot()

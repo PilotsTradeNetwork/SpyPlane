@@ -1,8 +1,11 @@
 import unittest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from ptn.spyplane.models.scout_system import ScoutSystem
+from ptn.spyplane.services.edsm_service import EdsmSystem
 from ptn.spyplane.services.systems_posting_service import SystemsPostingService
+
+MODULE = "ptn.spyplane.services.systems_posting_service"
 
 
 def _make_service(
@@ -154,3 +157,38 @@ class SystemsPostingServiceTests(unittest.IsolatedAsyncioTestCase):
 
         # Primary is never filtered by scout history
         self.assertEqual(result["Primary"], primary)
+
+
+def _edsm(name, coords):
+    return EdsmSystem(name=name, distance=0, is_populated=True, coords=coords)
+
+
+class OrderByRouteTests(unittest.IsolatedAsyncioTestCase):
+    async def test_sorts_along_route_and_puts_missing_last(self):
+        # On a line: A(0) C(10) B(20), D has no coords, E unknown to EDSM
+        systems = [ScoutSystem(n, "Tertiary", "u", 1) for n in ("A", "B", "D", "C", "E")]
+        splits = {"Primary": [], "Secondary": [], "Tertiary": systems}
+        edsm = {
+            "A": _edsm("A", (0, 0, 0)),
+            "B": _edsm("B", (20, 0, 0)),
+            "C": _edsm("C", (10, 0, 0)),
+            "D": _edsm("D", None),
+            "E": None,
+        }
+        with patch(f"{MODULE}.fetch_edsm_systems", AsyncMock(return_value=edsm)):
+            distances = await SystemsPostingService.order_by_route(splits)
+
+        names = [s.system for s in splits["Tertiary"]]
+        self.assertIn(names[:3], (["A", "C", "B"], ["B", "C", "A"]))
+        self.assertEqual(names[3:], ["D", "E"])
+        self.assertAlmostEqual(distances["Tertiary"], 20.0)
+        self.assertNotIn("Primary", distances)
+
+    async def test_edsm_failure_keeps_order(self):
+        systems = [ScoutSystem(n, "Primary", "u", 1) for n in ("A", "B", "C")]
+        splits = {"Primary": list(systems), "Secondary": [], "Tertiary": []}
+        with patch(f"{MODULE}.fetch_edsm_systems", AsyncMock(side_effect=RuntimeError("boom"))):
+            distances = await SystemsPostingService.order_by_route(splits)
+
+        self.assertEqual(splits["Primary"], systems)
+        self.assertEqual(distances, {})
