@@ -116,9 +116,11 @@ class SystemsPostingService:
 
         # Apply selection_mode sorting before limiting
         if selection_mode == "oldest_first":
-            # Sort ascending by added_at; treat 0 as very large (sort last)
-            def sort_key(s: ScoutSystem) -> int:
-                return s.added_at if s.added_at != 0 else 2**62
+            # Least recently scouted first (never scouted = 0, sorts first); tiebreak by added_at, 0 sorts last
+            last_scouted = await self.history_repo.get_last_scouted_map()
+
+            def sort_key(s: ScoutSystem) -> tuple[float, int]:
+                return last_scouted.get(s.system, 0), (s.added_at if s.added_at != 0 else 2**62)
 
             for priority, bucket in splits.items():
                 splits[priority] = sorted(bucket, key=sort_key)

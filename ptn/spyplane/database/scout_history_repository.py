@@ -25,6 +25,10 @@ recently_scouted_systems = """
 select distinct system_name from scout_history where timestamp >= ?
 """
 
+last_scouted_systems = """
+select system_name, max(timestamp) from scout_history group by system_name
+"""
+
 
 class ScoutHistoryRepository(BaseRepository):
     async def record_scout(self, system: ScoutSystem, username, userid, ts=None, since_ts: int = 0) -> bool:
@@ -72,6 +76,12 @@ class ScoutHistoryRepository(BaseRepository):
         async with self.db().execute(recently_scouted_systems, parameters=[cutoff]) as cur:
             rows = await cur.fetchall()
             return {r[0] for r in rows}
+
+    async def get_last_scouted_map(self) -> dict[str, float]:
+        """Return system name -> latest scout timestamp (UTC) for every scouted system."""
+        async with self.db().execute(last_scouted_systems) as cur:
+            rows = await cur.fetchall()
+            return {r[0]: r[1] for r in rows}
 
     async def purge_scout_systems_history(self) -> None:
         await self.db().execute(purge_scout_history)
