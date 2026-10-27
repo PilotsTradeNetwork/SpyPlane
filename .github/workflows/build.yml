@@ -10,13 +10,11 @@ env:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-
 
       - name: Login to PTN Container Registry
         uses: docker/login-action@v2
@@ -46,8 +44,15 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
+          load: true
           build-args: |
             VERSION=${{ steps.prep.outputs.BUILD_VER_CLEAN }}
           tags: |
             ${{ secrets.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ steps.prep.outputs.BUILD_VER }}
             ${{ steps.prep.outputs.IS_SEMVER == 'true' && format('{0}/{1}:latest', secrets.REGISTRY_URL, env.IMAGE_NAME) || '' }}
+
+      - name: Setup Test Data
+        run: docker run -v "$(pwd)/db:/app/db:rw" -v "$(pwd)/tests/test_workspace:/app/tests/test_workspace:rw" -w /app --entrypoint /bin/bash ${{ secrets.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ steps.prep.outputs.BUILD_VER }} /app/db/test_recreate.sh
+
+      - name: Test
+        run: docker run -v "$(pwd)/tests:/app/tests:rw" -w /app ${{ secrets.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ steps.prep.outputs.BUILD_VER }} python -m unittest discover tests -v
