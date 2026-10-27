@@ -25,15 +25,15 @@ class SystemsPostingService:
         bot = get_bot()
         tracked_systems = await self.repo.get_all_tracked_systems()
 
+        splits = await self.split_systems_by_priority(tracked_systems)
+        distances = await self.order_by_route(splits)
+
         # Purge channel and posted systems table so totals reflect only what is currently posted
         await self.repo.purge_posted_systems()
         await self._purge_channel()
 
         # Record the tick boundary used for scout deduplication
         await self.config_repo.update_config("last_posted_at", str(int(datetime.now(UTC).timestamp())))
-
-        splits = await self.split_systems_by_priority(tracked_systems)
-        distances = await self.order_by_route(splits)
 
         # Log counts before posting
         log(

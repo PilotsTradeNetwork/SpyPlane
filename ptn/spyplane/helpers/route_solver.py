@@ -3,15 +3,17 @@
 import math
 import random
 
+NO_NODE = -1  # sentinel for "past either end of the path"
+
 
 def distance_matrix(points):
     n = len(points)
     dist = [[0.0] * n for _ in range(n)]
     for i in range(n):
-        pi = points[i]
+        point_i = points[i]
         row = dist[i]
         for j in range(i + 1, n):
-            d = math.dist(pi, points[j])
+            d = math.dist(point_i, points[j])
             row[j] = d
             dist[j][i] = d
     return dist
@@ -25,43 +27,48 @@ def nearest_neighbor(dist, n, start):
     unvisited = set(range(n))
     unvisited.remove(start)
     path = [start]
-    cur = start
+    current = start
     while unvisited:
-        row = dist[cur]
-        cur = min(unvisited, key=row.__getitem__)
-        unvisited.remove(cur)
-        path.append(cur)
+        dist_from_current = dist[current]
+        current = min(unvisited, key=dist_from_current.__getitem__)
+        unvisited.remove(current)
+        path.append(current)
     return path
 
 
 def two_opt_path(path, dist):
     """
     2-opt for an OPEN path. Reversing path[i..j] replaces edges
-    (i-1, i) and (j, j+1); at either end there is no edge to remove,
-    which lets the endpoints move too. For each i, the best j is applied.
+    (before, first) + (last, after) with (before, last) + (first, after).
+    At either end there is no edge to remove, which lets the endpoints move too.
+    For each i, the best j is applied.
     """
     n = len(path)
     improved = True
     while improved:
         improved = False
         for i in range(n - 1):
-            a = path[i - 1] if i > 0 else -1
-            b = path[i]
-            d_b = dist[b]
-            ab = dist[a][b] if a >= 0 else 0.0
-            d_a = dist[a] if a >= 0 else None
+            first = path[i]
+            dist_from_first = dist[first]
+            if i > 0:
+                before = path[i - 1]
+                dist_from_before = dist[before]
+                old_left = dist_from_before[first]
+            else:
+                dist_from_before = None
+                old_left = 0.0
             best_delta, best_j = -1e-12, -1
             for j in range(i + 1, n):
                 if i == 0 and j == n - 1:
                     continue  # reversing the whole path changes nothing
-                c = path[j]
+                last = path[j]
                 if j < n - 1:
-                    d = path[j + 1]
-                    cd, bd = dist[c][d], d_b[d]
+                    after = path[j + 1]
+                    old_right, new_right = dist[last][after], dist_from_first[after]
                 else:
-                    cd = bd = 0.0
-                ac = d_a[c] if d_a is not None else 0.0
-                delta = ac + bd - ab - cd
+                    old_right = new_right = 0.0
+                new_left = dist_from_before[last] if dist_from_before is not None else 0.0
+                delta = new_left + new_right - old_left - old_right
                 if delta < best_delta:
                     best_delta, best_j = delta, j
             if best_j >= 0:
@@ -78,7 +85,7 @@ def or_opt_path(path, dist, max_seg=3):
     n = len(path)
 
     def edge(x, y):
-        return dist[x][y] if x >= 0 and y >= 0 else 0.0
+        return dist[x][y] if x != NO_NODE and y != NO_NODE else 0.0
 
     improved_any = False
     improved = True
@@ -86,26 +93,28 @@ def or_opt_path(path, dist, max_seg=3):
         improved = False
         for seg_len in range(1, max_seg + 1):
             for i in range(n - seg_len + 1):
-                seg = path[i : i + seg_len]
-                p = path[i - 1] if i > 0 else -1
-                q = path[i + seg_len] if i + seg_len < n else -1
-                remove_gain = edge(p, seg[0]) + edge(seg[-1], q) - edge(p, q)
-                if remove_gain <= 1e-12:
+                segment = path[i : i + seg_len]
+                prev_node = path[i - 1] if i > 0 else NO_NODE
+                next_node = path[i + seg_len] if i + seg_len < n else NO_NODE
+                # Saved by cutting the segment out and joining its neighbours
+                removal_gain = edge(prev_node, segment[0]) + edge(segment[-1], next_node) - edge(prev_node, next_node)
+                if removal_gain <= 1e-12:
                     continue
                 rest = path[:i] + path[i + seg_len :]
-                best, best_k, best_seg = 1e-12, -1, None
-                for k in range(len(rest) + 1):  # insert before rest[k]
-                    if k == i:
+                best_gain, best_pos, best_segment = 1e-12, -1, None
+                for pos in range(len(rest) + 1):  # insert before rest[pos]
+                    if pos == i:
                         continue  # original position
-                    x = rest[k - 1] if k > 0 else -1
-                    y = rest[k] if k < len(rest) else -1
-                    base = edge(x, y)
-                    for s in (seg, seg[::-1]):
-                        gain = remove_gain - (edge(x, s[0]) + edge(s[-1], y) - base)
-                        if gain > best:
-                            best, best_k, best_seg = gain, k, s
-                if best_k >= 0:
-                    path[:] = rest[:best_k] + best_seg + rest[best_k:]
+                    left = rest[pos - 1] if pos > 0 else NO_NODE
+                    right = rest[pos] if pos < len(rest) else NO_NODE
+                    gap_edge = edge(left, right)
+                    for oriented in (segment, segment[::-1]):
+                        insert_cost = edge(left, oriented[0]) + edge(oriented[-1], right) - gap_edge
+                        gain = removal_gain - insert_cost
+                        if gain > best_gain:
+                            best_gain, best_pos, best_segment = gain, pos, oriented
+                if best_pos >= 0:
+                    path[:] = rest[:best_pos] + best_segment + rest[best_pos:]
                     improved = improved_any = True
                     break
             if improved:
@@ -144,8 +153,8 @@ def solve_path(points, n_starts=None, seed=0):
 
     best_path: list[int] = []
     best_len = math.inf
-    for s in starts:
-        path = improve(nearest_neighbor(dist, n, s), dist)
+    for start in starts:
+        path = improve(nearest_neighbor(dist, n, start), dist)
         length = path_length(path, dist)
         if length < best_len:
             best_path, best_len = path, length
