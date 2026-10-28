@@ -165,12 +165,11 @@ uv run python -m unittest discover tests -v
 uv run tests
 ```
 
-- There are **43 tests** across 8 test files.
-- All 43 tests pass when the test DB is present.
+- All tests pass when the test DB is present.
 - Tests that hit the database use `IsolatedAsyncioTestCase` and import `bot`
   from `ptn.spyplane.spy_plane` to open/close the real SQLite connection.
-- `test_post_after_tick_service.py` makes a real HTTP request to
-  `http://tick.infomancer.uk/galtick.json` — it requires network access.
+- `test_post_after_tick_service.py` mocks the tick API HTTP response; no
+  network access is needed.
 - The `PyNaCl is not installed` warning printed during test runs is harmless
   (it only affects Discord voice features).
 
@@ -208,8 +207,7 @@ reformat. Always run `uv run format` on any files you touch.
 introduce new violations.
 
 Linting and formatting are enforced locally via **`prek`** (installed as a uv
-tool). They are **not enforced in CI** — the GitHub Actions workflow only
-builds and pushes a Docker image.
+tool) and in CI by the `Lint` step of `.github/workflows/test.yml`.
 
 To check only the main source tree:
 
@@ -222,13 +220,19 @@ uv run ruff check tests/
 
 ## CI / GitHub Actions
 
-The only CI pipeline is `.github/workflows/build.yml`. It:
-- Triggers on **`v*` tag pushes** and manual `workflow_dispatch`.
+`.github/workflows/test.yml` runs on PRs to `dev`, pushes to `dev`, and as a
+reusable workflow (`workflow_call`). It runs natively on the runner:
+`uv sync`, `prek run --all-files`, `db/test_recreate.sh`, then the unittest suite.
+
+`.github/workflows/build.yml`:
+- Triggers on **`v*` tag pushes**.
+- Calls `test.yml` first; the build job `needs: test`, so nothing is pushed if
+  tests or lint fail.
 - Logs in to the PTN container registry, builds the Docker image passing the
   tag version as `--build-arg VERSION=<tag>`, and pushes it.
 - Tags the image with the full tag name (e.g. `v1.2.3`). On clean semver tags,
   also updates the `latest` tag.
-- **Does not run tests, linting, or type-checking.**
+- Does not run type-checking.
 
 To build the Docker image locally with the correct SCM version baked in:
 
@@ -310,7 +314,7 @@ the git tag at build time. There is **no hardcoded version** in the source.
 **Summary of what to run before submitting:**
 1. `uv sync --extra dev`
 2. `prek run --all-files` — run twice if first run exits non-zero due to auto-fixes
-3. `uv run python -m unittest discover tests -v` — must pass with all 43 tests `OK`
+3. `uv run python -m unittest discover tests -v` — must pass with all tests `OK`
 
 ## Key Files Quick Reference
 
