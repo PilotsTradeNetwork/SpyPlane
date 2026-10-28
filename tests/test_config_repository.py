@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 from typing import TYPE_CHECKING
 from unittest import IsolatedAsyncioTestCase
 
@@ -28,4 +28,4 @@ class ConfigRepositoryTests(IsolatedAsyncioTestCase):
     async def assert_config(self, c, expected="6"):
         self.assertEqual("interval_hours", c.name)
         self.assertEqual(expected, c.value)
-        self.assertEqual(datetime.datetime.now(datetime.UTC).date(), c.timestamp.date())
+        self.assertEqual(dt.datetime.now(dt.UTC).date(), c.timestamp.date())
