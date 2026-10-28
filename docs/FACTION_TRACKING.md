@@ -1,50 +1,98 @@
-# Faction Tracking Commands Documentation
+# Faction Tracking Commands
 
 ## Overview
 
-The Faction Tracking system allows administrators to manage which star systems are being monitored for faction scouting operations. Systems are organised into three priority levels (Primary, Secondary, Tertiary) and posted to the scout channel for pilots to visit. The full tracking list is managed through a single modal interface (`/faction track`), which replaces the entire list each time it is submitted. The system validates system names against the local Elite Dangerous database and optionally cross-checks unknown names with EDSM.
+The `/faction` command group manages which star systems are scouted, posts them to the scout channel, and produces
+reports. Systems have one of three priorities (Primary, Secondary, Tertiary). The full list is managed through one
+modal (`/faction track`) that replaces the whole list on submit.
+
+Scouting is detected automatically from the EDDN stream. Pilots react to a posted system with the bullseye emoji to
+claim credit; the scout is recorded when EDDN reports a visit to that system.
+
+| Command | Purpose | Response visibility |
+|---|---|---|
+| `/faction track` | Edit the full tracked systems list (modal) | Public (errors ephemeral) |
+| `/faction list` | Export tracked systems as CSV | Public |
+| `/faction launch` | Post the scouting list to the scout channel now | Ephemeral |
+| `/faction config name value` | Change a config value | Public |
+| `/faction config_dump` | Show all config values | Public |
+| `/faction refresh_progress` | Force-refresh the scouting progress embeds | Ephemeral |
+| `/faction daily_report` | Post the faction state report in the current channel | Ephemeral confirmation |
+| `/faction operations_report` | Top scouts of the last 90 days + full history CSV | Public |
+| `@SpyPlane ping` | Reply with a gif and the bot version (text command) | Public |
+
+Permissions are not enforced in code; restrict who can use the commands via Discord's server integration settings.
 
 ## Database Structure
 
-### `scout_systems` Table
-- **`system_name`** (TEXT PRIMARY KEY): The star system name being tracked. Must be unique.
-- **`priority`** (TEXT NOT NULL): Priority level - one of "Primary", "Secondary", or "Tertiary".
-- **`added_by`** (TEXT NOT NULL): Discord username of the person who added the system.
-- **`added_at`** (INTEGER NOT NULL): Unix timestamp when the system was added.
+### `scout_systems`
+- **`system_name`** (TEXT PRIMARY KEY): Tracked system.
+- **`priority`** (TEXT NOT NULL): `Primary`, `Secondary` or `Tertiary`.
+- **`added_by`** (TEXT NOT NULL): Discord username of the last `/faction track` submitter.
+- **`added_at`** (INTEGER NOT NULL): Unix timestamp of that submission.
 
-### `systems` Table
-- **`name`** (TEXT PRIMARY KEY): Valid star system names from Elite Dangerous. Used for validation.
+### `systems`
+- **`name`** (TEXT PRIMARY KEY): Known Elite Dangerous system names, imported from `db/data/system_names.csv.7z`.
 
-### `scout_systems_posted` Table
-- **`system_name`** (TEXT PRIMARY KEY): System that has been posted to the scout channel.
-- **`priority`** (TEXT NOT NULL): Priority level of the posted system.
-- **`message_id`** (INTEGER): Discord message ID of the posted system message.
+### `scout_systems_posted`
+Systems posted by the latest launch. Cleared on every launch.
+- **`system_name`** (TEXT PRIMARY KEY)
+- **`priority`** (TEXT NOT NULL)
+- **`message_id`** (INTEGER): Discord message of the posted system.
+- **`scouted`** (INTEGER, default 0): Set to 1 when scouted (soft-delete), so per-tick counts stay accurate.
+
+### `scout_history`
+One row per recorded scout: `id`, `system_name`, `username`, `userid`, `timestamp`. `username` is `EDDN` and
+`userid` is `0` when nobody claimed the system.
+
+### `faction_states`
+Latest faction data per `(system, faction)` from EDDN: `active_csv`, `pending_csv`, `influence`, `controlling`.
+
+### `configuration`
+
+| Name | Default | Settable via `/faction config` | Meaning |
+|---|---|---|---|
+| `interval_hours` | 4 | Yes (1-24) | Hours after a tick before the scouting list is posted |
+| `daily_interval_hours` | 12 | No | Hours after a tick before the daily report is posted |
+| `primary_limit` | 0 | Yes (>= 0) | Max Primary systems per post, 0 = no limit |
+| `secondary_limit` | 0 | Yes (>= 0) | Max Secondary systems per post, 0 = no limit |
+| `tertiary_limit` | 0 | Yes (>= 0) | Max Tertiary systems per post, 0 = no limit |
+| `selection_mode` | `oldest_first` | Yes (`oldest_first`, `absolute`) | Ordering before limits apply (see `/faction launch`) |
+| `tracked_changed_at` | 0 | No | Set by `/faction track`; start of the "totals" window |
+| `last_posted_at` | 0 | No | Set by each launch; scout deduplication boundary |
+| `faction_goals_message_id` | - | No | Goals embed message (see [Faction Goals](FACTION_GOALS.md)) |
 
 ## Commands
 
 ### `/faction track`
-Sets the full list of systems to track for faction scouting. Opens a modal with three text fields (one per priority level). The submitted list **replaces the entire current tracking list**.
+Opens a modal with the current list prefilled. The submitted list **replaces the entire tracking list**.
 
-**Modal Fields:**
-- **Primary Systems**: One system name per line
-- **Secondary Systems**: One system name per line
-- **Tertiary Systems**: One system name per line
+**Modal fields** (all optional, one system per line, max 1000 characters each):
+- **Primary Systems**
+- **Secondary Systems**
+- **Tertiary Systems**
 
-All fields are optional. Leaving a field empty clears all systems of that priority. The modal is pre-populated with the current tracked systems so you can edit in-place.
+An empty field clears that priority. Duplicate names are saved once (first occurrence wins).
 
 **Validation:**
-- System names are first checked against the local `systems` table
-- Names not found locally are bulk-fetched from EDSM as a fallback
-- Any name not found in either source causes the entire submission to be rejected with the unknown names listed
-- Warnings (non-blocking) are shown for:
-  - Non-Tertiary systems more than 500 ly from the bubble
-  - Systems that may not be populated
+1. Each name is checked against the local `systems` table (exact, case-sensitive match)
+2. Names not found locally are looked up in one bulk request to EDSM (case-insensitive)
+3. If any name is found in neither, the whole submission is rejected:
+   ```
+   ## Errors
+   System(s) not found: InvalidSystem, Typo System
+   ```
+4. For names resolved via EDSM, non-blocking warnings are shown for:
+   - Non-Tertiary systems more than 500 ly from Sol
+   - Systems EDSM reports as possibly unpopulated
 
-**Behavior:**
-- On successful submission the entire `scout_systems` table is replaced atomically
-- `added_by` is set to the submitting user's Discord username
-- `added_at` is set to the current Unix timestamp for each system
-- The `tracked_changed_at` config value is updated to the current time
+If EDSM is unreachable, every name missing from the local table is reported as not found.
+
+**On success:**
+- `scout_systems` is replaced in one transaction and the in-memory cache (used by the EDDN listener) is reloaded
+- `added_by` / `added_at` are set to the submitter and the current time for **every** system
+- `tracked_changed_at` is set to now, which resets the "Scouting Totals" embed window
+- The scout channel is **not** reposted; run `/faction launch` or wait for the next tick
 
 **Example response:**
 ```
@@ -52,572 +100,257 @@ All fields are optional. Leaving a field empty clears all systems of that priori
 - 3 Primary
 - 3 Secondary
 - 2 Tertiary
-```
 
-**To remove systems:** re-open the modal, delete the unwanted lines, and resubmit.
-
-**To clear a priority entirely:** leave that field blank and resubmit.
-
-**Error case:**
-```
-## Errors
-System(s) not found: InvalidSystem, Typo System
+⚠️ Distant Systems not in Tertiary List: Far System (Primary)
+⚠️ Possibly not populated: Empty System
 ```
 
 ---
 
 ### `/faction list`
-Exports all currently tracked systems to a CSV file.
+Exports all tracked systems as a CSV attachment.
 
-**Parameters:**
-- None
-
-**Output:**
-- Creates a CSV file with columns:
-  - **System Name**: The star system name
-  - **Priority**: Priority level (Primary/Secondary/Tertiary)
-  - **Added By**: Discord username who added the system
-  - **Added At**: Timestamp when the system was added (YYYY-MM-DD HH:MM:SS format)
-- Sends the file as a Discord attachment
-- Includes an embed with:
-  - Total count of tracked systems
-  - Breakdown by priority (Primary, Secondary, Tertiary counts)
-
-**File Naming:**
-- Format: `tracked_systems_YYYYMMDD_HHMMSS.csv`
-- Example: `tracked_systems_20240115_143022.csv`
-
-**Example Output:**
-```
-📋 Tracked Systems Export
-Exported 25 tracked systems to CSV file
-
-🎯 Primary: 10
-⚡ Secondary: 8
-📊 Tertiary: 7
-```
-
-**No Systems Tracked:**
-```
-/faction list
-→ 📋 No systems are currently being tracked
-```
+- Columns: System Name, Priority, Added By, Added At (`YYYY-MM-DD HH:MM:SS`, UTC)
+- File name: `tracked_systems_YYYYMMDD_HHMMSS.csv`
+- Embed with the total and per-priority counts:
+  ```
+  📋 Tracked Systems Export
+  Exported 25 tracked systems to CSV file
+  🎯 Primary: 10   ⚡ Secondary: 8   📊 Tertiary: 7
+  ```
+- With no tracked systems: `📋 No systems are currently being tracked`
 
 ---
 
 ### `/faction launch`
-Posts all tracked systems to the scout channel, organized by priority.
-
-**Parameters:**
-- None
+Posts the scouting list to the scout channel immediately. The same routine runs automatically after each tick (see
+[Automatic Posting](#automatic-posting-after-tick)).
 
 **Behavior:**
-1. **Fetches tracked systems** from the database
-2. **Purges the scout channel** - deletes all non-pinned messages
-3. **Filters recently scouted systems**:
-   - Secondary systems scouted within the last 1 day are hidden
-   - Tertiary systems scouted within the last 2 days are hidden
-   - Primary systems are always shown
-4. **Sorts and limits** by priority using the configured `selection_mode` and per-priority limits
-5. **Posts systems** to the scout channel:
-   - Each system posted as a separate message
-   - Each message gets a reaction emoji (bullseye/target)
-   - Systems grouped by priority with headers
-6. **Stores message IDs** in `scout_systems_posted` table for tracking
-7. **Sends notification** to the Faction Scout role with link to first message
+1. Clears `scout_systems_posted`
+2. Deletes all non-pinned messages in the scout channel
+3. Sets `last_posted_at` to now
+4. Selects systems per priority:
+   - **Primary**: always included
+   - **Secondary**: skipped if scouted in the last 24 hours
+   - **Tertiary**: skipped if scouted in the last 48 hours
+   - Sorted by `selection_mode`, then cut to the per-priority limit
+5. Posts each system as its own message with a bullseye reaction, Primary first, then `__**Secondary List**__` and
+   `__**Tertiary List**__` headers
+6. Stores each message ID in `scout_systems_posted`
+7. If any systems are tracked, pings the Faction Scout role:
+   ```
+   @Faction Scout List Updated
+   Link to top: <jump URL to first Primary message>
+   ```
 
-**Selection Modes (`selection_mode` config):**
-- `oldest_first`: Systems with the earliest `added_at` timestamp are posted first; systems with `added_at = 0` sort last
-- `absolute`: Systems are posted in insertion order as returned from the database
+**Selection modes:**
+- `oldest_first` (default): Least recently scouted first, using each system's latest `scout_history` entry. Systems
+  never scouted come first. Ties are broken by `added_at`. With a limit set, scouted systems move to the back, so the
+  posted list rotates through all systems over successive postings.
+- `absolute`: Order as stored in the database, ignoring scout history.
 
-**Per-priority Limits:**
-- `primary_limit`, `secondary_limit`, `tertiary_limit` cap how many systems are posted per priority
-- A limit of `0` means no cap - all eligible systems are posted
-
-**Channel Format:**
-```
-[Primary systems - no header]
-System1
-System2
-System3
-
-__**Secondary List**__
-System4
-System5
-
-__**Tertiary List**__
-System6
-System7
-```
-
-**Response:**
-```
-Spy plane is now on the prowl!
-```
-
-**Notification:**
-After posting, sends a message to the scout channel:
-```
-<@&FACTION_SCOUT_ROLE_ID> List Updated
-Link to top: [jump URL to first message]
-```
-
-**Important Notes:**
-- Command is ephemeral (only visible to the executor)
-- All non-pinned messages in the scout channel are deleted before posting
-- Message IDs are stored for future reference
-- Systems are posted in the order they appear in the database
+**Response:** `Spy plane is now on the prowl!` (ephemeral)
 
 ---
 
-## EDDN Listener - Automated Scouting
-
-The EDDN (Elite Dangerous Data Network) listener provides automated scouting capabilities for tracked systems. When enabled, it monitors the EDDN stream for player activity in tracked systems and automatically marks them as scouted.
-
-### How It Works
-
-1. **EDDN Stream Monitoring**: The bot connects to the EDDN stream (default: `tcp://eddn.edcd.io:9500`) via ZMQ and receives real-time player journal events from Elite Dangerous.
-
-2. **Event Filtering**: The listener only processes specific event types from tracked systems:
-   - **FSDJump**: When a player jumps to a system
-   - **Location**: When a player's location is updated
-   - **CarrierJump**: When a fleet carrier jumps to a system
-
-3. **System Matching**: Before processing, the listener checks if the system in the event is in the tracked systems cache. Only events from tracked systems are processed.
-
-4. **Automated Actions**: When a tracked system is detected:
-   - **Records the scout**: Marks the system as scouted in the database with username "EDDN" and userid 0
-   - **Deletes Discord message**: Automatically removes the system's message from the scout channel (if it exists and isn't pinned)
-   - **Updates faction states**: Extracts and stores faction state information (influence, active/pending states) from the event data
-
-### Configuration
-
-**Enable/Disable:**
-- The EDDN listener starts automatically when the bot starts (unless disabled)
-- To disable: Set environment variable `EDDN_DISABLE=True`
-- When disabled, the listener thread will not start
-
-**Event Dumping:**
-- Optional: Set environment variable `EDDN_DUMP=True` to save all EDDN events to a file
-- Events are saved to: `./workspace/eddn_events.jsonl`
-- Useful for debugging or analysis
-
-### Benefits
-
-1. **Automatic Scouting**: Systems are automatically marked as scouted when any player (with EDDN enabled) visits them, without requiring manual reaction clicks.
-
-2. **Real-time Updates**: Faction state information is updated immediately when players visit tracked systems, providing current data for BGS operations.
-
-3. **Reduced Manual Work**: Scout channel messages are automatically cleaned up when systems are scouted via EDDN.
-
-4. **Broader Coverage**: Works for any player using EDDN-enabled tools (EDMC, EDDiscovery, etc.), not just Discord users.
-
-### How It Integrates with Tracking
-
-1. **Cache Synchronization**: When systems are added/removed via `/faction_track` or `/faction_remove`, the tracked systems cache is updated, which the EDDN listener uses for filtering.
-
-2. **Message Management**: When EDDN detects a visit to a tracked system:
-   - The system is removed from `scout_systems_posted` table
-   - The Discord message is deleted (if not pinned)
-   - Scout history is recorded
-
-3. **Faction State Updates**: EDDN events contain faction data that is stored in the `faction_states` table, providing up-to-date information about faction influence and states.
-
-### Limitations
-
-- **EDDN Dependency**: Only works for players who have EDDN-enabled tools (EDMC, EDDiscovery, etc.)
-- **Event Types**: Only processes FSDJump, Location, and CarrierJump events
-- **System Validation**: System must be in the tracked systems cache to be processed
-- **Message Deletion**: Only deletes messages that exist in `scout_systems_posted` table
-
-### Example Flow
-
-1. Admin adds system: `/faction_track system_names:"Kambarci" priority:Primary`
-2. Admin launches list: `/faction_launch` → System posted to scout channel
-3. Player with EDMC visits Kambarci → EDMC sends FSDJump event to EDDN
-4. EDDN listener receives event → Checks if Kambarci is tracked → Yes
-5. Listener processes event:
-   - Records scout: "EDDN scouted Kambarci"
-   - Deletes Discord message for Kambarci
-   - Updates faction states from event data
-6. System is now marked as scouted and removed from active list
-
-### Troubleshooting EDDN Listener
-
-**Q: EDDN listener not processing events?**
-- Check if listener is enabled: Look for "EDDN listener started" in logs
-- Verify `EDDN_DISABLE` is not set to "True"
-- Check EDDN connection: Look for "Connected to EDDN stream" in logs
-
-**Q: Systems not being auto-scouted?**
-- Verify system is in tracked systems (use `/faction_list`)
-- Check if players visiting the system have EDDN-enabled tools
-- Verify the event type is one of: FSDJump, Location, CarrierJump
-
-**Q: Messages not being deleted?**
-- Check if message is pinned (pinned messages are never deleted)
-- Verify message exists in `scout_systems_posted` table
-- Check bot permissions in the scout channel
-
-**Q: Want to see EDDN events?**
-- Set `EDDN_DUMP=True` environment variable
-- Events will be saved to `./workspace/eddn_events.jsonl`
-- File is appended to, so it grows over time
-
----
-
-## Priority Levels Explained
-
-### Primary Priority
-- **Posting Frequency**: Every day
-- **Use Case**: Critical systems requiring daily attention
-- **Rotation**: None - all Primary systems are posted daily
-- **Example**: Systems with active conflicts, high-value targets
-
-### Secondary Priority
-- **Posting Frequency**: Every other day (rotated)
-- **Use Case**: Important systems that don't need daily attention
-- **Rotation**: Systems split into 2 groups, alternating days
-- **Example**: Systems being monitored for potential conflicts
-
-### Tertiary Priority
-- **Posting Frequency**: Every third day (rotated)
-- **Use Case**: Lower priority systems for periodic monitoring
-- **Rotation**: Systems split into 3 groups, rotating every 3 days
-- **Example**: Long-term monitoring targets, background systems
-
----
-
-## Workflow Examples
-
-### Setting Up a New Tracking List
-
-1. **Open the tracking modal:**
-   ```
-   /faction track
-   ```
-
-2. **Fill in each priority field** - one system name per line in each text box.
-
-3. **Submit** - the bot validates all names and confirms with a count summary.
-
-4. **Verify the list:**
-   ```
-   /faction list
-   → Download CSV to review all tracked systems
-   ```
-
-5. **Launch the scout list:**
-   ```
-   /faction launch
-   → Systems posted to scout channel
-   ```
-
-### Updating Tracked Systems
-
-1. **Open the modal** - it is pre-populated with the current list:
-   ```
-   /faction track
-   ```
-
-2. **Edit the text fields** - add, remove, or move systems between priority fields as needed.
-
-3. **Submit** - the full list is replaced atomically.
-
-4. **Reload the scout channel:**
-   ```
-   /faction launch
-   → Updated list posted
-   ```
-
-### Changing a System's Priority
-
-1. Open `/faction track` - the modal shows the current list.
-2. Delete the system from its current priority field.
-3. Add it to the desired priority field.
-4. Submit. The system is re-added with the new priority and a fresh `added_at` timestamp.
-
----
-
-## Technical Details
-
-### System Validation
-- Systems must exist in the `systems` table to be added
-- The `systems` table contains valid Elite Dangerous star system names
-- Validation happens before any systems are added (all-or-nothing validation)
-- Invalid systems are reported with specific names
-
-### Caching
-- Tracked systems are cached in memory for performance
-- Cache is updated when systems are added, removed, or bulk operations occur
-- Cache can be force-reloaded if needed
-- Cache reduces database queries for frequently accessed data
-
-### Message Management
-- When `/faction_launch` is executed, all non-pinned messages in the scout channel are deleted
-- Each system is posted as a separate message
-- Message IDs are stored in `scout_systems_posted` for tracking
-- Pinned messages are preserved during channel purge
-
-### Selection and Limiting
-- Systems are sorted by `selection_mode`: `oldest_first` (by `added_at` timestamp) or `absolute` (insertion order)
-- Per-priority limits (`primary_limit`, `secondary_limit`, `tertiary_limit`) cap the number of systems posted
-- Recently scouted systems are automatically hidden: Secondary within 1 day, Tertiary within 2 days
-
-### Bulk Operations
-- Maximum 10 systems per command for safety and performance
-- Bulk operations are atomic where possible
-- Partial success is reported (e.g., "5 added, 2 failed")
-- Operations update cache after completion
-
----
-
-## Best Practices
-
-1. **System Names**: Use exact system names as they appear in Elite Dangerous. Case-sensitive matching.
-
-2. **Priority Assignment**:
-   - Use Primary for systems requiring immediate daily attention
-   - Use Secondary for important but not urgent systems
-   - Use Tertiary for long-term monitoring
-
-3. **Bulk Operations**: When adding/removing multiple systems, group them by priority to make management easier.
-
-4. **Regular Updates**: Use `/faction_list` periodically to review tracked systems and ensure accuracy.
-
-5. **Launch Timing**: Run `/faction_launch` after making changes to ensure the scout channel reflects current priorities.
-
-6. **Limit Tuning**: Use `primary_limit`, `secondary_limit`, and `tertiary_limit` to control how many systems appear per priority each posting.
-
----
-
-## Troubleshooting
-
-**Q: System not found when trying to add?**
-- Verify the system name is spelled correctly and matches Elite Dangerous exactly
-- System must exist in the `systems` validation table
-- Check for typos or extra spaces
-
-**Q: Systems not appearing after launch?**
-- Verify systems were successfully added using `/faction list`
-- Secondary/Tertiary systems scouted recently are automatically hidden (1d and 2d respectively)
-- Check whether a per-priority limit is set too low via `/faction config_dump`
-
-**Q: Too many systems appearing?**
-- Use per-priority limits: `/faction config name:secondary_limit value:10`
-- To reduce the tracked list, open `/faction track`, remove lines from the relevant field, and resubmit
-- Export with `/faction list` to review in a spreadsheet
-
-**Q: Want to change a system's priority?**
-- Open `/faction track`, move the system name from one priority field to another, and resubmit
-
-**Q: Channel not purging correctly?**
-- Pinned messages are never deleted
-- Check bot permissions in the scout channel
-- Verify the channel ID is correctly configured
-
-**Q: Want to change the order systems are posted?**
-- Set `selection_mode` to `oldest_first` to surface the longest-tracked systems first
-- Set `selection_mode` to `absolute` to use insertion order
-- Use `/faction list` to export and review all tracked systems
-
----
-
-## Related Commands
-
-- **`/faction config`**: Configure system settings like `selection_mode` and per-priority limits
-- **`/faction config_dump`**: View current configuration values
-
----
-
-## Report Commands
-
-### `/faction_daily_report`
-Generates and posts a daily faction state report showing active and pending states for tracked systems.
+### `/faction config`
+Sets a config value.
 
 **Parameters:**
-- None
+- **`name`** (choice): `interval_hours`, `primary_limit`, `secondary_limit`, `tertiary_limit`, `selection_mode`
+- **`value`**: New value. Autocompletes for `selection_mode`. Values are lower-cased.
 
-**Behavior:**
-1. **Fetches tracked systems** from the database
-2. **Retrieves faction states** for each tracked system from the `faction_states` table
-3. **Filters states** to only show non-expansion states (wars, elections, civil wars, etc.)
-4. **Checks PTN expansion warnings** - shows systems where PTN influence is above 65% (warning) or 70% (danger)
-5. **Creates embed** with:
-   - Title: "P.T.N. Faction News ™"
-   - Footer: GalNet icon and branding
-   - Timestamp: Current UTC time
-   - Fields: One field per system containing faction states
+**Validation:**
+- `interval_hours`: integer 1-24
+- `*_limit`: non-negative integer, `0` = no limit
+- `selection_mode`: `oldest_first` or `absolute`
 
-**Report Content:**
-- **PTN Expansion Section**: Shows systems where PTN influence is high (if any)
-  - Format: `System Name - status (influence%)`
-  - Status: "warning" (>65%) or "danger" (>70%)
-- **System Fields**: Each tracked system with non-expansion states gets a field showing:
-  - Format: `Faction Name - State Name (Active)` or `(Pending)`
-  - Only shows states other than "expansion"
-  - Multiple states per faction are shown on separate lines
-
-**Data Source:**
-- Faction states are collected from EDDN events when players visit systems
-- States are stored in the `faction_states` table
-- Data includes: active states, pending states, influence, controlling faction
-
-**Posting:**
-- Report is posted to the channel where the command was executed
-- If no channel specified, posts to the configured monitoring/report channel
-- Command response is ephemeral (only visible to executor)
-
-**Example Output:**
+**Examples:**
 ```
-P.T.N. Faction News ™
+/faction config name:secondary_limit value:10
+→ Config secondary_limit was set to 10
 
+/faction config name:interval_hours value:30
+→ Config was not set. interval_hours supports only numbers between 1 and 24
+```
+
+---
+
+### `/faction config_dump`
+Shows every row of the `configuration` table in an embed, including values not settable via `/faction config`.
+
+---
+
+### `/faction refresh_progress`
+Immediately refreshes both scouting progress embeds (see [Scouting Progress Embeds](#scouting-progress-embeds)).
+If the background refresh task has stopped, it is restarted and the response says so:
+```
+✅ Scouting progress embed refreshed.
+⚠️ The progress service was not running and has been restarted.
+```
+
+---
+
+### `/faction daily_report`
+Posts the faction state report in the channel where the command is run. The automatic post after each tick goes to
+the monitoring channel instead.
+
+**Content:**
+- **PTN Expansion** field: every system in `faction_states` where Pilots Trade Network influence is above 65%
+  (`warning`) or 70% (`danger`), tracked or not. Format: `Kambarci - danger (72.5%)`
+- One field per **tracked** system that has at least one non-expansion state:
+  `Faction Name - war (Active)` / `Faction Name - election (Pending)`. State names are lower-case; expansion is
+  omitted.
+- Embed footer: "P.T.N. Faction News ™" with the GalNet icon, timestamped now
+
+**Example:**
+```
 PTN Expansion
 Kambarci - danger (72.5%)
 LHS 3447 - warning (67.2%)
 
 Kambarci
-Pilots Trade Network - War (Active)
-Local Faction - Civil War (Pending)
-Another Faction - Election (Active)
-
-Sol
-Pilots Trade Network - War (Active)
+Pilots Trade Network - war (Active)
+Local Faction - civilwar (Pending)
 ```
 
-**Filtering Logic:**
-- Expansion states are excluded from the report (only shown in PTN Expansion section)
-- Only tracked systems are included in the report
-- Systems with no non-expansion states are not shown
-- PTN expansion warnings are shown regardless of tracked status
-
-**Use Cases:**
-- Daily monitoring of faction conflicts and states
-- Identifying systems requiring attention
-- Tracking PTN expansion risk
-- Monitoring active wars, elections, and civil wars
+Data comes from EDDN; systems nobody has visited since tracking started have no states.
 
 ---
 
-### `/faction_operations_report`
-Generates a classified operations report showing scout activity statistics and exports scout history to CSV.
-
-**Parameters:**
-- None
+### `/faction operations_report`
+Classified scout activity report.
 
 **Behavior:**
-1. **Fetches scout history** from the `scout_history` table
-2. **Filters to last 3 months** of activity
-3. **Counts scouts by username** to identify top performers
-4. **Generates embed** with top 5 scouts
-5. **Exports CSV file** with complete scout history
-6. **Posts both** embed and CSV file
+1. Reads `scout_history` and keeps entries from the last 90 days
+2. Ranks usernames by scout count; shows the top 5 with 🥇🥈🥉🏅
+3. Exports the **full** `scout_history` table to `./workspace/faction_command_eyesonly.csv` and attaches it
 
-**Report Content:**
-- **Embed Title**: "🔍 Faction Operations Report"
-- **Description**: Shows total activity count for last 3 months
-- **Top 5 Scouts**: Ranked list with medals (🥇🥈🥉🏅)
-  - Format: `Medal #Rank Username` → `Count scout reports`
-- **Footer**: "[TOP SECRET] Eyes-Only Faction Command"
-- **CSV File**: Complete scout history export
-  - Filename: `faction_command_eyesonly.csv`
-  - Location: `./workspace/faction_command_eyesonly.csv`
-  - Contains: id, system_name, username, userid, timestamp
+**Responses:**
+- **Success**: Green embed `🔍 Faction Operations Report` with total activity, top 5, footer
+  `[TOP SECRET] Eyes-Only Faction Command`, plus CSV
+- **No activity**: Red embed, `No scout activity recorded in the last 3 months. Asset status: INACTIVE`
+- **CSV failure**: Embed plus `⚠️ CSV export failed, but scout rankings are available above.`
+- **Error**: Red embed, `Asset compromised. Report failed. Escalate to flight command.`
 
-**Data Source:**
-- Scout history from `scout_history` table
-- Records include:
-  - System name that was scouted
-  - Username who scouted (or "EDDN" for automated scouts)
-  - User ID (0 for EDDN, actual Discord user ID for manual scouts)
-  - Timestamp of the scout
+EDDN-attributed scouts are ranked under the username `EDDN`.
 
-**Time Period:**
-- Only includes scouts from the last 90 days (3 months)
-- Older scouts are excluded from rankings
-- CSV export contains ALL scout history (not filtered by time)
-
-**Rankings:**
-- Scouts are ranked by total count of scout reports
-- Top 5 are displayed with medals
-- Ties are handled by sorting order (first occurrence wins)
-- Includes both manual scouts (Discord reactions) and automated scouts (EDDN)
-
-**CSV Export:**
-- Generated using SQLite export script
-- Contains all columns from `scout_history` table
-- Headers included in CSV
-- Saved to workspace directory
-- File is attached to the Discord message
-
-**Response States:**
-- **Success**: Embed with top 5 scouts + CSV file attachment
-- **No Activity**: Red embed showing "No scout activity recorded in the last 3 months. Asset status: **INACTIVE**"
-- **CSV Export Failure**: Embed is still sent, but CSV export fails with warning message
-- **Error**: Red embed with error message "Asset compromised. Report failed. Escalate to flight command."
-
-**Example Output:**
-```
-🔍 Faction Operations Report
-Top 5 Scouts (Last 3 Months)
-Total Activity: 127 reports
-
-🥇 #1 PilotName
-   45 scout reports
-
-🥈 #2 AnotherPilot
-   32 scout reports
-
-🥉 #3 ThirdPilot
-   28 scout reports
-
-🏅 #4 FourthPilot
-   12 scout reports
-
-🏅 #5 FifthPilot
-   10 scout reports
-
-[TOP SECRET] Eyes-Only Faction Command
-```
-
-**CSV Format:**
+**CSV format:**
 ```csv
 id,system_name,username,userid,timestamp
-1,Kambarci,PilotName,123456789,1704067200
-2,LHS 3447,EDDN,0,1704070800
-3,Sol,AnotherPilot,987654321,1704074400
-...
+1,Kambarci,PilotName,123456789,1704067200.0
+2,LHS 3447,EDDN,0,1704070800.0
 ```
-
-**Use Cases:**
-- Tracking scout activity and performance
-- Identifying top contributors
-- Generating reports for faction leadership
-- Analyzing scout patterns over time
-- Exporting data for external analysis
-
-**Important Notes:**
-- Report is classified as "TOP SECRET" and "Eyes-Only Faction Command"
-- CSV contains complete history, not just last 3 months
-- EDDN scouts are included in rankings (shown as username "EDDN")
-- Report can be run in any channel (not restricted to specific channels)
 
 ---
 
-## Channel Configuration
+### `@SpyPlane ping`
+Text command (prefix is a bot mention or `🕵`). Replies with a random gif and the bot version. Mentioning the bot
+without a command replies with a greeting gif.
 
-The scout channel is configured in `ptn/spyplane/constants.py`:
-- **Production**: `PROD_CHANNEL_SCOUT`
-- **Testing**: `TEST_CHANNEL_SCOUT`
-- Selected based on `PRODUCTION` environment variable
+---
 
-The Faction Scout role ID is also configured:
-- **Production**: `PROD_ROLE_SCOUT`
-- **Testing**: `TEST_ROLE_SCOUT`
-- Used for notifications when launching the scout list
+## Automatic Posting After Tick
 
-The monitoring/report channel is configured as:
-- **Production**: `PROD_CHANNEL_MONITORING`
-- **Testing**: `TEST_CHANNEL_MONITORING`
-- Used for daily reports and monitoring messages
+`PostAfterTickService` polls `http://tick.infomancer.uk/galtick.json` every 5 minutes. On a new galaxy tick it:
+1. Posts `Tick detected. Spy Plane will take off in ~ N hours` in the scout channel
+2. After `interval_hours`, runs the same routine as `/faction launch`
+3. After `daily_interval_hours`, posts the daily report to the monitoring channel
 
+The wait is in memory; a bot restart during the wait cancels that post.
+
+## EDDN Listener: Automated Scouting
+
+The listener runs in a background thread and subscribes to the EDDN ZMQ stream (`EDDN_URL`, default
+`tcp://eddn.edcd.io:9500`).
+
+### How it works
+1. Only `FSDJump`, `Location` and `CarrierJump` events for systems in the tracked cache are processed
+2. For a matching event:
+   - If the system has a posted message, the first non-bot user who reacted with the bullseye gets credit;
+     otherwise the scout is attributed to `EDDN` (userid `0`). Multiple reactors are logged; the first wins.
+   - A scout row is written to `scout_history` and `scout_systems_posted.scouted` is set to 1, unless the system
+     was already scouted since `last_posted_at` (one scout per system per posting)
+   - The system's message is deleted from the scout channel (unless pinned)
+   - Faction states for the system are replaced with the event's faction data
+
+### Configuration
+- `EDDN_DISABLE=true` (case-insensitive): do not start the listener
+- `EDDN_DUMP=True` (exact): append every received event to `./workspace/eddn_events.jsonl`
+- `EDDN_URL`: ZMQ endpoint, e.g. `ipc:///tmp/eddn` when using a local proxy
+
+### Example flow
+1. Admin adds Kambarci as Primary via `/faction track`, then runs `/faction launch`
+2. A pilot reacts to the Kambarci message with the bullseye and jumps there with EDMC running
+3. EDDN delivers the FSDJump; the listener records the scout for that pilot, deletes the message and updates
+   faction states
+4. Later visits before the next posting update faction states but do not add more scout rows
+
+### Limitations
+- Only visits by players running EDDN-enabled tools (EDMC, EDDiscovery, etc.) are detected
+- Reacting alone does not record a scout
+- Only systems in the tracked cache are processed
+
+## Scouting Progress Embeds
+
+`ScoutingProgressService` refreshes two embeds every 10 minutes (or on `/faction refresh_progress`):
+
+| Embed | Channel | Counts |
+|---|---|---|
+| `📡 Scouting Progress (This Tick)` | Scout channel | Scouted / posted per priority from `scout_systems_posted` |
+| `📊 Scouting Totals (Since Last Change)` | Monitoring channel | Unique tracked systems scouted since `tracked_changed_at` / tracked per priority |
+
+- Each line reads `scouted/total (pct%)`; priorities with no systems are hidden
+- Color: green when all priorities are 100%, yellow when any is at least 50%, red otherwise, grey when empty
+- The bot edits its last message; after a restart it finds the embed among the channel's **pinned** messages by
+  title, otherwise it posts a new one
+- `/faction launch` deletes non-pinned messages in the scout channel, so **pin the progress embed** to keep a
+  single message
+
+## Channel and Role Configuration
+
+All IDs live in `ptn/spyplane/constants.py` and switch on `PRODUCTION`:
+
+| Purpose | Prod constant | Test constant |
+|---|---|---|
+| Scout channel (list, progress embed) | `PROD_CHANNEL_SCOUT` | `TEST_CHANNEL_SCOUT` |
+| Monitoring channel (daily report, totals embed) | `PROD_CHANNEL_MONITORING` | `TEST_CHANNEL_MONITORING` |
+| Bot dev channel (startup message) | `PROD_BOT_DEV_CHANNEL` | `TEST_BOT_DEV_CHANNEL` |
+| Faction Scout role (launch ping) | `PROD_ROLE_SCOUT` | `TEST_ROLE_SCOUT` |
+| Bullseye reaction emoji | `PROD_EMOJI_TARGET` | `TEST_EMOJI_TARGET` |
+
+If the bullseye emoji is not available, `✅` is used.
+
+## Best Practices
+
+1. **System names**: Use exact in-game names; the local lookup is case-sensitive.
+2. **Priorities**: Primary for daily attention, Secondary for every-other-day, Tertiary for long-term monitoring.
+3. **After editing**: Run `/faction launch` if the change should be visible before the next tick.
+4. **Limits**: Use `*_limit` to cap how many systems appear per priority. With `oldest_first`, systems not visited
+   for longest are posted first, so a capped list still cycles through every system.
+5. **Pin embeds**: Pin both progress embeds so they survive purges and restarts.
+
+## Troubleshooting
+
+**Q: System not found when saving?**
+- Check spelling and spacing; it must exist locally or in EDSM
+
+**Q: Systems missing after launch?**
+- Check `/faction list`
+- Secondary/Tertiary systems scouted in the last 24h/48h are skipped
+- Check limits with `/faction config_dump`
+
+**Q: Systems not auto-scouted?**
+- The visiting player must run an EDDN-enabled tool
+- Check logs for `EDDN listener started` and `Connected to EDDN stream`, and that `EDDN_DISABLE` is not set
+- Only one scout per system is recorded per posting
+
+**Q: Wrong pilot credited?**
+- Credit goes to the first non-bot user who reacted before the EDDN visit; no reaction means `EDDN`
+
+**Q: Progress embed reposted on every launch?**
+- Pin it in the scout channel
+
+**Q: Channel not purged?**
+- Pinned messages are never deleted; check bot permissions in the scout channel

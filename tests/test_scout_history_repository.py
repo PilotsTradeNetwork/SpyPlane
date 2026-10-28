@@ -34,3 +34,16 @@ class ScoutHistoryRepositoryTests(IsolatedAsyncioTestCase):
         self.assertEqual("zaszrespawned", history[0].username)
         self.assertEqual(354990093980663889, history[0].userid)
         self.assertEqual(datetime.now(UTC).date(), history[0].timestamp.date())
+
+    async def test_get_last_scouted_map(self):
+        older = datetime(2026, 1, 1, tzinfo=UTC)
+        newer = datetime(2026, 1, 2, tzinfo=UTC)
+        await self.subject.record_scout(ScoutSystem("Volowahku", "Primary"), "a", 1, older)
+        await self.subject.record_scout(
+            ScoutSystem("Volowahku", "Primary"), "b", 2, newer, since_ts=int(newer.timestamp())
+        )
+        await self.subject.record_scout(ScoutSystem("Sol", "Primary"), "a", 1, older)
+
+        result = await self.subject.get_last_scouted_map()
+
+        self.assertEqual({"Volowahku": newer.timestamp(), "Sol": older.timestamp()}, result)

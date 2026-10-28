@@ -12,6 +12,7 @@ def _make_service(
     selection_mode="absolute",
     scouted_1d=None,
     scouted_2d=None,
+    last_scouted=None,
 ):
     config_values = {
         "primary_limit": str(primary_limit),
@@ -35,6 +36,7 @@ def _make_service(
             scouted_2d if scouted_2d is not None else [],
         ]
     )
+    history_repo.get_last_scouted_map = AsyncMock(return_value=last_scouted or {})
 
     return SystemsPostingService(repo=None, config_repo=config_repo, history_repo=history_repo)
 
@@ -114,6 +116,30 @@ class SystemsPostingServiceTests(unittest.IsolatedAsyncioTestCase):
 
         names = [s.system for s in result["Primary"]]
         self.assertEqual(names[-1], "P_zero")
+
+    async def test_selection_mode_oldest_first_least_recently_scouted_first(self):
+        systems = [
+            ScoutSystem("P_recent", "Primary", "u", 10),
+            ScoutSystem("P_never", "Primary", "u", 30),
+            ScoutSystem("P_old", "Primary", "u", 20),
+        ]
+
+        subject = _make_service(selection_mode="oldest_first", last_scouted={"P_recent": 2000.0, "P_old": 1000.0})
+        result = await subject.split_systems_by_priority(systems)
+
+        names = [s.system for s in result["Primary"]]
+        self.assertEqual(names, ["P_never", "P_old", "P_recent"])
+
+    async def test_selection_mode_oldest_first_limit_rotates_by_scout_time(self):
+        secondary = self._secondary(4)
+        # Secondary1 and Secondary2 scouted (outside the 1d window), the others never
+        last_scouted = {secondary[0].system: 1000.0, secondary[1].system: 2000.0}
+
+        subject = _make_service(selection_mode="oldest_first", secondary_limit=3, last_scouted=last_scouted)
+        result = await subject.split_systems_by_priority(secondary)
+
+        names = [s.system for s in result["Secondary"]]
+        self.assertEqual(names, ["Secondary3", "Secondary4", "Secondary1"])
 
     async def test_selection_mode_absolute_preserves_order(self):
         systems = [
