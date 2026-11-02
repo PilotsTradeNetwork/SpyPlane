@@ -44,7 +44,7 @@ def run_tests():
     except FileNotFoundError:
         print("Error: bash not found.")
         sys.exit(1)
-    result = subprocess.run(  # noqa: S603
+    result = subprocess.run(
         [sys.executable, "-m", "unittest", "discover", "tests", "-v"],
         cwd=root,
         check=False,

@@ -15,7 +15,8 @@ for the space game *Elite Dangerous*. Key responsibilities:
 - Tracks star systems that need scouting and posts them to a Discord channel.
 - Listens to the **EDDN** (Elite Dangerous Data Network) ZMQ stream to
   automatically record scouts when a player visits a tracked system.
-- Manages faction **goals** (add/remove/post/embed) visible to Discord members.
+- Manages faction **goals** (add/edit/remove/list/post/embed) visible to Discord members.
+- Maintains scouting progress embeds (per tick and since last list change).
 - Reads faction influence and state data from EDDN events and stores them in
   SQLite.
 - Periodically checks for in-game "ticks" and re-posts the scouting list on a
@@ -29,14 +30,14 @@ for the space game *Elite Dangerous*. Key responsibilities:
 |---|---|
 | Language | Python 3.13 (`.python-version` pins to `3.13`) |
 | Package manager | `uv` (see `pyproject.toml` and `uv.lock`); `prek` for pre-commit hooks (uv tool) |
-| Runtime | `discord.py 2.6`, `aiosqlite`, `pyzmq`, `aiohttp` |
+| Runtime | `discord.py 2.7`, `aiosqlite`, `pyzmq`, `httpx` (tick + EDSM APIs), `discord-ext-prometheus` |
 | Test framework | `unittest` (stdlib `IsolatedAsyncioTestCase`) |
 | Linter/formatter | `ruff` (config in `pyproject.toml`) |
 | Database | SQLite, file at `./workspace/spyplane.db` (prod) or `./tests/test_workspace/spyplane.db` (test); schema in `db/schema.sql` |
 | Containerisation | Docker via `Dockerfile` + `entrypoint.sh` |
 | CI | GitHub Actions — builds and pushes a Docker image on `v*` tag push (`.github/workflows/build.yml`) |
 | Line length | 120 characters (configured in `pyproject.toml`) |
-| Target Python | `>=3.10` (ruff `target-version = "py310"`) |
+| Target Python | `>=3.13` (`requires-python`, ruff `target-version = "py313"`) |
 
 ---
 
@@ -52,12 +53,11 @@ SpyPlane/
 │   ├── eddn_listener.py     # Background thread for EDDN ZMQ stream
 │   ├── ruff_commands.py     # Wrappers for `uv run lint / format / lint-fix`
 │   ├── _metadata.py         # __version__
-│   ├── commands/            # One file per slash command; __init__.py imports all
+│   ├── commands/            # One file per command group (factions, goals, ping); __init__.py imports all
 │   ├── database/            # Repository classes (base + one per table group)
 │   ├── helpers/             # journal_helper.py — EDDN event filtering
 │   ├── models/              # Dataclasses: ScoutSystem, Config, ScoutHistory
-│   ├── services/            # Business logic: posting, tick, faction states, etc.
-│   └── scripts/             # SQL export helpers
+│   └── services/            # Business logic: posting, tick, faction states, EDSM, progress, etc.
 ├── tests/                   # unittest test suite
 │   ├── test_workspace/      # Test database lives here (spyplane.db)
 │   └── test_data/           # Static fixtures
@@ -66,16 +66,15 @@ SpyPlane/
 │   ├── recreate.sh          # Recreates the production workspace DB
 │   ├── test_recreate.sh     # Recreates the test DB (used before running tests)
 │   └── data/                # seed_database.py + compressed system CSVs
-├── eddn_proxy/              # Standalone ZMQ proxy utilities (not part of main bot)
+├── docs/                    # User-facing command reference (FACTION_GOALS.md, FACTION_TRACKING.md)
 ├── workspace/               # Runtime directory — gitignored DB, CSV files
+├── CHANGELOG.md             # Release notes
 ├── pyproject.toml           # Project metadata, dependencies, ruff config, scripts
 ├── uv.lock                  # Locked dependencies (commit changes to this)
 ├── Dockerfile               # Docker build (python:3.13-slim-bookworm base)
 ├── entrypoint.sh            # Docker CMD — optionally recreates DB then runs bot
 └── localrun.sh              # Docker convenience script for local runs
 ```
-
-The `spyplane/` directory at the repo root contains only `__pycache__` subdirectories — it is a legacy artifact and should not be edited.
 
 ---
 
@@ -84,7 +83,7 @@ The `spyplane/` directory at the repo root contains only `__pycache__` subdirect
 Copy `.env.sample` to `.env` and populate all values. **Never hardcode secrets.**
 The bot reads credentials exclusively from environment variables via `python-dotenv`.
 
-Key environment variables (all read in `ptn/spyplane/constants.py`):
+Key environment variables (read in `ptn/spyplane/constants.py` unless noted):
 
 | Variable | Purpose |
 |---|---|
@@ -94,8 +93,8 @@ Key environment variables (all read in `ptn/spyplane/constants.py`):
 | `APPLICATION_ID_PROD` / `APPLICATION_ID_TESTING` | Discord application IDs |
 | `PROD_DISCORD_GUILD` / `TEST_DISCORD_GUILD` | Guild IDs for slash command sync |
 | `EDDN_URL` | ZMQ endpoint (default: `tcp://eddn.edcd.io:9500`) |
-| `EDDN_DISABLE` | Set to `"true"` to skip starting the EDDN listener thread |
-| `EDDN_DUMP` | Set to `"True"` to dump raw EDDN events to `workspace/eddn_events.jsonl` |
+| `EDDN_DISABLE` | Set to `"true"` (case-insensitive) to skip starting the EDDN listener thread (read in `discord_listener.py`) |
+| `EDDN_DUMP` | Set to exactly `"True"` to dump raw EDDN events to `workspace/eddn_events.jsonl` (read in `eddn_listener.py`) |
 | `DB_RECREATE` | Set to any value in Docker to trigger DB recreation on startup |
 
 `PRODUCTION=False` is the correct setting for all local development and testing.
@@ -162,10 +161,12 @@ Same steps but writes to `./workspace/spyplane.db` and also seeds with
 ```bash
 bash db/test_recreate.sh          # ensure test DB is up-to-date
 uv run python -m unittest discover tests -v
+# or, both steps in one:
+uv run tests
 ```
 
-- There are **40 tests** across 8 test files.
-- All 40 tests pass when the test DB is present.
+- There are **43 tests** across 8 test files.
+- All 43 tests pass when the test DB is present.
 - Tests that hit the database use `IsolatedAsyncioTestCase` and import `bot`
   from `ptn.spyplane.spy_plane` to open/close the real SQLite connection.
 - `test_post_after_tick_service.py` makes a real HTTP request to
@@ -275,12 +276,19 @@ Follow these rules exactly when adding new code:
 
 ## Adding a New Slash Command
 
-1. Create `ptn/spyplane/commands/my_command.py` following the pattern of
-   existing command files (use `@bot.tree.command` or `@app_commands`).
-2. Add `from ptn.spyplane.commands import my_command` to
-   `ptn/spyplane/commands/__init__.py`.
-3. No further registration is needed — `Commands()` in `run()` triggers the
-   import.
+Slash commands live in `app_commands.Group`s: `/faction ...` in `commands/factions.py`,
+`/goal ...` in `commands/goals.py`. `ping` is a text command (`@bot.command`).
+
+- **New subcommand in an existing group**: add a `@faction.command(name=...)` or
+  `@goal.command(name=...)` function in that file. Keep the commands above the
+  `bot.tree.add_command(...)` line.
+- **New group**: create `ptn/spyplane/commands/my_group.py` with an
+  `app_commands.Group`, register it with `get_bot().tree.add_command(group)`, and
+  add the module to the import and `__all__` in `commands/__init__.py`.
+- No further registration is needed - `Commands()` in `run()` triggers the
+  import; commands sync to `GUILD_ID` in `SpyPlane.setup_hook()`.
+- Permissions are not enforced in code (managed in Discord integration settings).
+- Update the command reference in `docs/` when adding or changing commands.
 
 ---
 
@@ -302,7 +310,7 @@ the git tag at build time. There is **no hardcoded version** in the source.
 **Summary of what to run before submitting:**
 1. `uv sync --extra dev`
 2. `prek run --all-files` — run twice if first run exits non-zero due to auto-fixes
-3. `uv run python -m unittest discover tests -v` — must pass with all 33 tests `OK`
+3. `uv run python -m unittest discover tests -v` — must pass with all 43 tests `OK`
 
 ## Key Files Quick Reference
 
@@ -312,13 +320,21 @@ the git tag at build time. There is **no hardcoded version** in the source.
 | `ptn/spyplane/constants.py` | All config, channel/role IDs, env vars, logging |
 | `ptn/spyplane/spy_plane.py` | Bot class (`SpyPlane`), DB lifecycle, entry point `run()` |
 | `ptn/spyplane/bot_registry.py` | `register_bot()` / `get_bot()` singleton |
-| `ptn/spyplane/discord_listener.py` | `on_ready`, `on_message`, `on_raw_reaction_add`, error handler |
-| `ptn/spyplane/eddn_listener.py` | ZMQ background thread, EDDN event processing |
+| `ptn/spyplane/discord_listener.py` | `on_ready` (sets channels/emoji, starts tick, progress and EDDN tasks), `on_message`, `on_disconnect`, `on_error`, app command error handler. There is no reaction handler; reactions are read by the EDDN listener for attribution |
+| `ptn/spyplane/commands/factions.py` | `/faction` group: `track` (modal), `list`, `launch`, `config`, `config_dump`, `refresh_progress`, `daily_report`, `operations_report` |
+| `ptn/spyplane/commands/goals.py` | `/goal` group: `add`, `edit`, `remove`, `list`, `embed`, `post` + modals/views |
+| `ptn/spyplane/commands/ping.py` | `ping` text command |
+| `ptn/spyplane/eddn_listener.py` | ZMQ background thread; on a tracked-system visit credits the first bullseye reactor (else `EDDN`), records the scout, deletes the posted message, updates faction states |
 | `ptn/spyplane/database/base_repository.py` | Base class with `db()`, `begin()`, `commit()`, `rollback()` |
 | `ptn/spyplane/database/systems_repository.py` | `scout_systems` + `scout_systems_posted` table operations; `get_posted_systems()` returns unscouted rows only; `get_all_posted_systems()` returns all rows with scouted flag |
-| `ptn/spyplane/services/systems_posting_service.py` | Post scouting list to Discord channel |
+| `ptn/spyplane/services/systems_posting_service.py` | Purge + post scouting list; per-priority recency filter, `selection_mode` (`oldest_first` = least recently scouted first), limits; sets `last_posted_at` |
+| `ptn/spyplane/services/scout_recording_service.py` | Record a scout once per system per posting (dedup on `last_posted_at`) and `mark_scouted` |
+| `ptn/spyplane/services/scout_systems_cache.py` | In-memory tracked systems cache used by the EDDN filter |
+| `ptn/spyplane/services/edsm_service.py` | Bulk EDSM lookup for `/faction track` validation (distance, populated) |
+| `ptn/spyplane/services/config_service.py` | `/faction config` validation + config dump embed |
+| `ptn/spyplane/services/daily_faction_state_service.py` | Daily faction state report embed |
 | `ptn/spyplane/services/tick_service.py` | Poll tick API, detect new ticks |
-| `ptn/spyplane/services/post_after_tick_service.py` | Schedule system posting after tick |
+| `ptn/spyplane/services/post_after_tick_service.py` | 5-minute tick poll; after a tick posts systems after `interval_hours` and the daily report after `daily_interval_hours` |
 | `ptn/spyplane/services/faction_state_service.py` | Extract + persist faction states from EDDN |
 | `ptn/spyplane/services/scouting_progress_service.py` | Periodic + on-demand refresh of tick progress and totals embeds; reads scouted counts directly from `scout_systems_posted.scouted` |
 | `ptn/spyplane/helpers/journal_helper.py` | Filter EDDN events by type + tracked systems |
