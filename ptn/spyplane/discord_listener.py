@@ -90,12 +90,6 @@ async def on_ready():
     except Exception as e:
         log_exception("on_ready", e)
 
-    # Cron in not needed anymore, we are able to read embeds, and BGS Bot messages can trigger spy plane.
-    # await bot.channel.send(f'{bot.user.name} has connected to Discord server. Version: {__version__}')
-    # @aiocron.crontab('0/10 * * * *')
-    # async def tick_cron_job():
-    #     await post_service.tick_check_and_schedule()
-
 
 @bot.event
 async def on_disconnect():
