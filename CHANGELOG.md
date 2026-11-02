@@ -1,4 +1,13 @@
 # Changelog
+## 2.1.0
+- [#54](https://github.com/PilotsTradeNetwork/SpyPlane/pull/54) Sort posted systems by shortest route (IndorilReborn)
+- [#55](https://github.com/PilotsTradeNetwork/SpyPlane/pull/55) Order `oldest_first` selection by last scout time (IndorilReborn)
+
+## 2.0.2
+- Properly count scouted systems for the current tick
+- Fix posted counts by soft-deleting scouted systems
+- Add `/faction refresh_progress` command
+
 ## 2.0.1
 - Simplify goals flow, improve adding goals UX
 
