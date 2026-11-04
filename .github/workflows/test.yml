@@ -1,0 +1,40 @@
+name: Test
+
+on:
+  pull_request:
+    branches:
+      - dev
+  push:
+    branches:
+      - dev
+  workflow_call:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install system dependencies
+        run: |
+          if ! command -v sqlite3 >/dev/null || ! command -v 7zr >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends sqlite3 p7zip-full
+          fi
+
+      - name: Install dependencies
+        run: uv sync --locked --extra dev
+
+      - name: Lint
+        run: uvx prek run --all-files --show-diff-on-failure
+
+      - name: Setup test data
+        run: bash db/test_recreate.sh
+
+      - name: Test
+        run: uv run python -m unittest discover tests -v
